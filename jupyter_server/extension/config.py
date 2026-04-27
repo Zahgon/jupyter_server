@@ -14,8 +14,7 @@ class ExtensionConfigManager(ConfigManager):
     def get_jpserver_extensions(self, section_name=DEFAULT_SECTION_NAME):
         """Return the jpserver_extensions field from all
         config files found."""
-        data = self.get(section_name)
-        return data.get("ServerApp", {}).get("jpserver_extensions", {})
+        pass
 
     def enabled(self, name, section_name=DEFAULT_SECTION_NAME, include_root=True):
         """Is the extension enabled?"""
@@ -23,10 +22,8 @@ class ExtensionConfigManager(ConfigManager):
 
     def enable(self, name):
         """Enable an extension by name."""
-        data = {"ServerApp": {"jpserver_extensions": {name: True}}}
-        self.update(name, data)
+        pass
 
     def disable(self, name):
         """Disable an extension by name."""
-        data = {"ServerApp": {"jpserver_extensions": {name: False}}}
-        self.update(name, data)
+        pass

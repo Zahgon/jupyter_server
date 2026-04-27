@@ -40,10 +40,7 @@ class CallContext:
         value: Any
             The value associated with the named variable for this call context
         """
-        name_value_map = CallContext._get_map()
-        if name in name_value_map:
-            return name_value_map[name]
-        return None  # TODO: should this raise `LookupError` (or a custom error derived from said)
+        pass
 
     @classmethod
     def set(cls, name: str, value: Any) -> None:
@@ -79,7 +76,4 @@ class CallContext:
 
         If the map does not exist in the current context, an empty map is created and returned.
         """
-        ctx: Context = copy_context()
-        if CallContext._name_value_map not in ctx:
-            CallContext._name_value_map.set({})
-        return CallContext._name_value_map.get()
+        pass

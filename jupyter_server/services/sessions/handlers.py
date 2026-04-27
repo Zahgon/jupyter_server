@@ -38,9 +38,7 @@ class SessionRootHandler(SessionsAPIHandler):
     @authorized
     async def get(self):
         """Get a list of running sessions."""
-        sm = self.session_manager
-        sessions = await ensure_async(sm.list_sessions())
-        self.finish(json.dumps(sessions, default=json_default))
+        pass
 
     @web.authenticated
     @authorized
@@ -56,9 +54,7 @@ class SessionHandler(SessionsAPIHandler):
     @authorized
     async def get(self, session_id):
         """Get the JSON model for a single session."""
-        sm = self.session_manager
-        model = await sm.get_session(session_id=session_id)
-        self.finish(json.dumps(model, default=json_default))
+        pass
 
     @web.authenticated
     @authorized
@@ -68,71 +64,7 @@ class SessionHandler(SessionsAPIHandler):
         - path updates session to track renamed paths
         - kernel.name starts a new kernel with a given kernelspec
         """
-        sm = self.session_manager
-        km = self.kernel_manager
-        model = self.get_json_body()
-        if model is None:
-            raise web.HTTPError(400, "No JSON data provided")
-
-        # get the previous session model
-        before = await sm.get_session(session_id=session_id)
-
-        changes = {}
-        if "notebook" in model and "path" in model["notebook"]:
-            self.log.warning("Sessions API changed, see updated swagger docs")
-            model["path"] = model["notebook"]["path"]
-            model["type"] = "notebook"
-        if "path" in model:
-            changes["path"] = model["path"]
-        if "name" in model:
-            changes["name"] = model["name"]
-        if "type" in model:
-            changes["type"] = model["type"]
-        if "kernel" in model:
-            # Kernel id takes precedence over name.
-            if model["kernel"].get("id") is not None:
-                kernel_id = model["kernel"]["id"]
-                if kernel_id not in km:
-                    raise web.HTTPError(400, "No such kernel: %s" % kernel_id)
-                changes["kernel_id"] = kernel_id
-            elif model["kernel"].get("name") is not None:
-                kernel_name = model["kernel"]["name"]
-
-                try:
-                    kernel_id = await sm.start_kernel_for_session(
-                        session_id,
-                        kernel_name=kernel_name,
-                        name=before["name"],
-                        path=before["path"],
-                        type=before["type"],
-                    )
-                    changes["kernel_id"] = kernel_id
-                except Exception as e:
-                    # the error message may contain sensitive information, so we want to
-                    # be careful with it, thus we only give the short repr of the exception
-                    # and the full traceback.
-                    # this should be fine as we are exposing here the same info as when we start a new kernel
-                    msg = "The '%s' kernel could not be started: %s" % (
-                        kernel_name,
-                        repr(str(e)),
-                    )
-                    status_msg = "Error starting kernel %s" % kernel_name
-                    self.log.error("Error starting kernel: %s", kernel_name)
-                    self.set_status(501)
-                    self.finish(json.dumps({"message": msg, "short_message": status_msg}))
-                    return
-
-        await sm.update_session(session_id, **changes)
-        s_model = await sm.get_session(session_id=session_id)
-
-        if s_model["kernel"]["id"] != before["kernel"]["id"]:
-            # kernel_id changed because we got a new kernel
-            # shutdown the old one
-            fut = asyncio.ensure_future(ensure_async(km.shutdown_kernel(before["kernel"]["id"])))
-            # If we are not using pending kernels, wait for the kernel to shut down
-            if not getattr(km, "use_pending_kernels", None):
-                await fut
-        self.finish(json.dumps(s_model, default=json_default))
+        pass
 
     @web.authenticated
     @authorized

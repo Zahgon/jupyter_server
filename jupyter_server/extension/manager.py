@@ -78,53 +78,19 @@ class ExtensionPoint(HasTraits):
 
     def _get_linker(self):
         """Get a linker."""
-        if self.app:
-            linker = self.app._link_jupyter_server_extension
-        else:
-            linker = getattr(
-                self.module,
-                # Search for a _link_jupyter_extension
-                "_link_jupyter_server_extension",
-                # Otherwise return a dummy function.
-                lambda serverapp: None,
-            )
-        return linker
+        pass
 
     def _get_loader(self):
         """Get a loader."""
-        loc = self.app
-        if not loc:
-            loc = self.module
-        loader = get_loader(loc)
-        return loader
+        pass
 
     def _get_starter(self):
         """Get a starter function."""
-        if self.app:
-            linker = self.app._start_jupyter_server_extension
-        else:
-
-            async def _noop_start(serverapp):
-                pass
-
-            linker = getattr(
-                self.module,
-                # Search for a _start_jupyter_extension
-                "_start_jupyter_server_extension",
-                # Otherwise return a no-op function.
-                _noop_start,
-            )
-        return linker
+        pass
 
     def validate(self):
         """Check that both a linker and loader exists."""
-        try:
-            self._get_linker()
-            self._get_loader()
-        except Exception:
-            return False
-        else:
-            return True
+        pass
 
     def link(self, serverapp):
         """Link the extension to a Jupyter ServerApp object.
@@ -132,11 +98,7 @@ class ExtensionPoint(HasTraits):
         This looks for a `_link_jupyter_server_extension` function
         in the extension's module or ExtensionApp class.
         """
-        if not self.linked:
-            linker = self._get_linker()
-            linker(serverapp)
-            # Store this extension as already linked.
-            self._linked = True
+        pass
 
     def load(self, serverapp):
         """Load the extension in a Jupyter ServerApp object.
@@ -144,15 +106,13 @@ class ExtensionPoint(HasTraits):
         This looks for a `_load_jupyter_server_extension` function
         in the extension's module or ExtensionApp class.
         """
-        loader = self._get_loader()
-        return loader(serverapp)
+        pass
 
     async def start(self, serverapp):
         """Call's the extensions 'start' hook where it can
         start (possibly async) tasks _after_ the event loop is running.
         """
-        starter = self._get_starter()
-        return await starter(serverapp)
+        pass
 
 
 class ExtensionPackage(LoggingConfigurable):
@@ -197,19 +157,15 @@ class ExtensionPackage(LoggingConfigurable):
 
     def validate(self):
         """Validate all extension points in this package."""
-        return all(extension.validate() for extension in self.extension_points.values())
+        pass
 
     def link_point(self, point_name, serverapp):
         """Link an extension point."""
-        linked = self._linked_points.get(point_name, False)
-        if not linked:
-            point = self.extension_points[point_name]
-            point.link(serverapp)
+        pass
 
     def load_point(self, point_name, serverapp):
         """Load an extension point."""
-        point = self.extension_points[point_name]
-        return point.load(serverapp)
+        pass
 
     async def start_point(self, point_name, serverapp):
         """Load an extension point."""
@@ -217,12 +173,11 @@ class ExtensionPackage(LoggingConfigurable):
 
     def link_all_points(self, serverapp):
         """Link all extension points."""
-        for point_name in self.extension_points:
-            self.link_point(point_name, serverapp)
+        pass
 
     def load_all_points(self, serverapp):
         """Load all extension points."""
-        return [self.load_point(point_name, serverapp) for point_name in self.extension_points]
+        pass
 
     async def start_all_points(self, serverapp):
         """Load all extension points."""
@@ -297,60 +252,21 @@ class ExtensionManager(LoggingConfigurable):
 
     def from_jpserver_extensions(self, jpserver_extensions):
         """Add extensions from 'jpserver_extensions'-like dictionary."""
-        for name, enabled in jpserver_extensions.items():
-            self.add_extension(name, enabled=enabled)
+        pass
 
     def add_extension(self, extension_name, enabled=False):
         """Try to add extension to manager, return True if successful.
         Otherwise, return False.
         """
-        try:
-            extpkg = ExtensionPackage(name=extension_name, enabled=enabled)
-            self.extensions[extension_name] = extpkg
-            return True
-        # Raise a warning if the extension cannot be loaded.
-        except Exception as e:
-            if self.serverapp and self.serverapp.reraise_server_extension_failures:
-                raise
-            self.log.warning(
-                "%s | error adding extension (enabled: %s): %s",
-                extension_name,
-                enabled,
-                e,
-                exc_info=True,
-            )
-        return False
+        pass
 
     def link_extension(self, name):
         """Link an extension by name."""
-        linked = self.linked_extensions.get(name, False)
-        extension = self.extensions[name]
-        if not linked and extension.enabled:
-            try:
-                # Link extension and store links
-                extension.link_all_points(self.serverapp)
-                self.linked_extensions[name] = True
-                self.log.info("%s | extension was successfully linked.", name)
-            except Exception as e:
-                if self.serverapp and self.serverapp.reraise_server_extension_failures:
-                    raise
-                self.log.warning("%s | error linking extension: %s", name, e, exc_info=True)
+        pass
 
     def load_extension(self, name):
         """Load an extension by name."""
-        extension = self.extensions.get(name)
-
-        if extension and extension.enabled:
-            try:
-                extension.load_all_points(self.serverapp)
-            except Exception as e:
-                if self.serverapp and self.serverapp.reraise_server_extension_failures:
-                    raise
-                self.log.warning(
-                    "%s | extension failed loading with message: %r", name, e, exc_info=True
-                )
-            else:
-                self.log.info("%s | extension was successfully loaded.", name)
+        pass
 
     async def start_extension(self, name):
         """Start an extension by name."""
@@ -364,19 +280,13 @@ class ExtensionManager(LoggingConfigurable):
         """Link all enabled extensions
         to an instance of ServerApp
         """
-        # Sort the extension names to enforce deterministic linking
-        # order.
-        for name in self.sorted_extensions:
-            self.link_extension(name)
+        pass
 
     def load_all_extensions(self):
         """Load all enabled extensions and append them to
         the parent ServerApp.
         """
-        # Sort the extension names to enforce deterministic loading
-        # order.
-        for name in self.sorted_extensions:
-            self.load_extension(name)
+        pass
 
     async def start_all_extensions(self):
         """Start all enabled extensions."""

@@ -86,23 +86,7 @@ def _backward_compat_user(got_user: t.Any) -> User:
 
     Make some effort to allow common patterns to keep working.
     """
-    if isinstance(got_user, str):
-        return User(username=got_user)
-    elif isinstance(got_user, dict):
-        kwargs = {}
-        if "username" not in got_user and "name" in got_user:
-            kwargs["username"] = got_user["name"]
-        for field in User.__dataclass_fields__:
-            if field in got_user:
-                kwargs[field] = got_user[field]
-        try:
-            return User(**kwargs)
-        except TypeError:
-            msg = f"Unrecognized user: {got_user}"
-            raise ValueError(msg) from None
-    else:
-        msg = f"Unrecognized user: {got_user}"
-        raise ValueError(msg)
+    pass
 
 
 class IdentityProvider(LoggingConfigurable):
@@ -217,85 +201,36 @@ class IdentityProvider(LoggingConfigurable):
 
         _may_ be a coroutine
         """
-        return self._get_user(handler)
+        pass
 
     # not sure how to have optional-async type signature
     # on base class with `async def` without splitting it into two methods
 
     async def _get_user(self, handler: web.RequestHandler) -> User | None:
         """Get the user."""
-        if getattr(handler, "_jupyter_current_user", None):
-            # already authenticated
-            return t.cast("User", handler._jupyter_current_user)  # type:ignore[attr-defined]
-        _token_user: User | None | t.Awaitable[User | None] = self.get_user_token(handler)
-        if isinstance(_token_user, t.Awaitable):
-            _token_user = await _token_user
-        token_user: User | None = _token_user  # need second variable name to collapse type
-        _cookie_user = self.get_user_cookie(handler)
-        if isinstance(_cookie_user, t.Awaitable):
-            _cookie_user = await _cookie_user
-        cookie_user: User | None = _cookie_user
-        # prefer token to cookie if both given,
-        # because token is always explicit
-        user = token_user or cookie_user
-
-        if user is not None and token_user is not None:
-            # if token-authenticated, persist user_id in cookie
-            # if it hasn't already been stored there
-            if user != cookie_user:
-                self.set_login_cookie(handler, user)
-            # Record that the current request has been authenticated with a token.
-            # Used in is_token_authenticated above.
-            handler._token_authenticated = True  # type:ignore[attr-defined]
-
-        if user is None:
-            # If an invalid cookie was sent, clear it to prevent unnecessary
-            # extra warnings. But don't do this on a request with *no* cookie,
-            # because that can erroneously log you out (see gh-3365)
-            cookie_name = self.get_cookie_name(handler)
-            cookie = handler.get_cookie(cookie_name)
-            if cookie is not None:
-                self.log.warning(f"Clearing invalid/expired login cookie {cookie_name}")
-                self.clear_login_cookie(handler)
-            if not self.auth_enabled:
-                # Completely insecure! No authentication at all.
-                # No need to warn here, though; validate_security will have already done that.
-                user = self.generate_anonymous_user(handler)
-                # persist user on first request
-                # so the user data is stable for a given browser session
-                self.set_login_cookie(handler, user)
-
-        return user
+        pass
 
     def update_user(
         self, handler: web.RequestHandler, user_data: dict[UpdatableField, str]
     ) -> User:
         """Update user information and persist the user model."""
-        self.check_update(user_data)
-        current_user = t.cast("User", handler.current_user)
-        updated_user = self.update_user_model(current_user, user_data)
-        self.persist_user_model(handler)
-        return updated_user
+        pass
 
     def check_update(self, user_data: dict[UpdatableField, str]) -> None:
         """Raises if some fields to update are not updatable."""
-        for field in user_data:
-            if field not in self.updatable_fields:
-                msg = f"Field {field} is not updatable"
-                raise ValueError(msg)
+        pass
 
     def update_user_model(self, current_user: User, user_data: dict[UpdatableField, str]) -> User:
         """Update user information."""
-        raise NotImplementedError
+        pass
 
     def persist_user_model(self, handler: web.RequestHandler) -> None:
         """Persist the user model (i.e. a cookie)."""
-        raise NotImplementedError
+        pass
 
     def identity_model(self, user: User) -> dict[str, t.Any]:
         """Return a User as an Identity model"""
-        # TODO: validate?
-        return asdict(user)
+        pass
 
     def get_handlers(self) -> list[tuple[str, object]]:
         """Return list of additional handlers for this identity provider
@@ -311,29 +246,11 @@ class IdentityProvider(LoggingConfigurable):
 
         Default is just the user's username.
         """
-        # default: username is enough
-        cookie = json.dumps(
-            {
-                "username": user.username,
-                "name": user.name,
-                "display_name": user.display_name,
-                "initials": user.initials,
-                "color": user.color,
-            }
-        )
-        return cookie
+        pass
 
     def user_from_cookie(self, cookie_value: str) -> User | None:
         """Inverse of user_to_cookie"""
-        user = json.loads(cookie_value)
-        return User(
-            user["username"],
-            user["name"],
-            user["display_name"],
-            user["initials"],
-            None,
-            user["color"],
-        )
+        pass
 
     def get_cookie_name(self, handler: web.RequestHandler) -> str:
         """Return the login cookie name
@@ -342,26 +259,11 @@ class IdentityProvider(LoggingConfigurable):
         Default is to generate a string taking host into account to avoid
         collisions for multiple servers on one hostname with different ports.
         """
-        if self.cookie_name:
-            return self.cookie_name
-        else:
-            return _non_alphanum.sub("-", f"username-{handler.request.host}")
+        pass
 
     def set_login_cookie(self, handler: web.RequestHandler, user: User) -> None:
         """Call this on handlers to set the login cookie for success"""
-        cookie_options = {}
-        cookie_options.update(self.cookie_options)
-        cookie_options.setdefault("httponly", True)
-        # tornado <4.2 has a bug that considers secure==True as soon as
-        # 'secure' kwarg is passed to set_secure_cookie
-        secure_cookie = self.secure_cookie
-        if secure_cookie is None:
-            secure_cookie = handler.request.protocol == "https"
-        if secure_cookie:
-            cookie_options.setdefault("secure", True)
-        cookie_options.setdefault("path", handler.base_url)  # type:ignore[attr-defined]
-        cookie_name = self.get_cookie_name(handler)
-        handler.set_secure_cookie(cookie_name, self.user_to_cookie(user), **cookie_options)
+        pass
 
     def _force_clear_cookie(
         self, handler: web.RequestHandler, name: str, path: str = "/", domain: str | None = None
@@ -379,30 +281,11 @@ class IdentityProvider(LoggingConfigurable):
         was set (but there is no way to find out on the server side
         which values were used for a given cookie).
         """
-        name = escape.native_str(name)
-        expires = datetime.datetime.now(tz=datetime.timezone.utc) - datetime.timedelta(days=365)
-
-        morsel: Morsel[t.Any] = Morsel()
-        morsel.set(name, "", '""')
-        morsel["expires"] = httputil.format_timestamp(expires)
-        morsel["path"] = path
-        if domain:
-            morsel["domain"] = domain
-        handler.add_header("Set-Cookie", morsel.OutputString())
+        pass
 
     def clear_login_cookie(self, handler: web.RequestHandler) -> None:
         """Clear the login cookie, effectively logging out the session."""
-        cookie_options = {}
-        cookie_options.update(self.cookie_options)
-        path = cookie_options.setdefault("path", handler.base_url)  # type:ignore[attr-defined]
-        cookie_name = self.get_cookie_name(handler)
-        handler.clear_cookie(cookie_name, path=path)
-        if path and path != "/":
-            # also clear cookie on / to ensure old cookies are cleared
-            # after the change in path behavior.
-            # N.B. This bypasses the normal cookie handling, which can't update
-            # two cookies with the same name. See the method above.
-            self._force_clear_cookie(handler, cookie_name)
+        pass
 
     def get_user_cookie(
         self, handler: web.RequestHandler
@@ -411,21 +294,7 @@ class IdentityProvider(LoggingConfigurable):
 
         Calls user_from_cookie to deserialize cookie value
         """
-        _user_cookie = handler.get_secure_cookie(
-            self.get_cookie_name(handler),
-            **self.get_secure_cookie_kwargs,
-        )
-        if not _user_cookie:
-            return None
-        user_cookie = _user_cookie.decode()
-        # TODO: try/catch in case of change in config?
-        try:
-            return self.user_from_cookie(user_cookie)
-        except Exception as e:
-            # log bad cookie itself, only at debug-level
-            self.log.debug(f"Error unpacking user from cookie: cookie={user_cookie}", exc_info=True)
-            self.log.error(f"Error unpacking user from cookie: {e}")
-            return None
+        pass
 
     auth_header_pat = re.compile(r"(token|bearer)\s+(.+)", re.IGNORECASE)
 
@@ -437,13 +306,7 @@ class IdentityProvider(LoggingConfigurable):
         - in URL parameters: ?token=<token>
         - in header: Authorization: token <token>
         """
-        user_token = handler.get_argument("token", "")
-        if not user_token:
-            # get it from Authorization header
-            m = self.auth_header_pat.match(handler.request.headers.get("Authorization", ""))
-            if m:
-                user_token = m.group(2)
-        return user_token
+        pass
 
     async def get_user_token(self, handler: web.RequestHandler) -> User | None:
         """Identify the user based on a token in the URL or Authorization header
@@ -452,33 +315,7 @@ class IdentityProvider(LoggingConfigurable):
         - uuid if authenticated
         - None if not
         """
-        token = t.cast("str | None", handler.token)  # type:ignore[attr-defined]
-        if not token:
-            return None
-        # check login token from URL argument or Authorization header
-        user_token = self.get_token(handler)
-        authenticated = False
-        if user_token == token:
-            # token-authenticated, set the login cookie
-            self.log.debug(
-                "Accepting token-authenticated request from %s",
-                handler.request.remote_ip,
-            )
-            authenticated = True
-
-        if authenticated:
-            # token does not correspond to user-id,
-            # which is stored in a cookie.
-            # still check the cookie for the user id
-            _user = self.get_user_cookie(handler)
-            if isinstance(_user, t.Awaitable):
-                _user = await _user
-            user: User | None = _user
-            if user is None:
-                user = self.generate_anonymous_user(handler)
-            return user
-        else:
-            return None
+        pass
 
     def generate_anonymous_user(self, handler: web.RequestHandler) -> User:
         """Generate a random anonymous user.
@@ -486,13 +323,7 @@ class IdentityProvider(LoggingConfigurable):
         For use when a single shared token is used,
         but does not identify a user.
         """
-        user_id = uuid.uuid4().hex
-        moon = get_anonymous_username()
-        name = display_name = f"Anonymous {moon}"
-        initials = f"A{moon[0]}"
-        color = None
-        handler.log.debug(f"Generating new user for token-authenticated request: {user_id}")  # type:ignore[attr-defined]
-        return User(user_id, name, display_name, initials, None, color)
+        pass
 
     def should_check_origin(self, handler: web.RequestHandler) -> bool:
         """Should the Handler check for CORS origin validation?
@@ -503,7 +334,7 @@ class IdentityProvider(LoggingConfigurable):
         - True, if Handler must check for valid CORS origin.
         - False, if Handler should skip origin check since requests are token-authenticated.
         """
-        return not self.is_token_authenticated(handler)
+        pass
 
     def is_token_authenticated(self, handler: web.RequestHandler) -> bool:
         """Returns True if handler has been token authenticated. Otherwise, False.
@@ -514,9 +345,7 @@ class IdentityProvider(LoggingConfigurable):
         - xsrf protection
         - skip origin-checks for scripts
         """
-        # ensure get_user has been called, so we know if we're token-authenticated
-        handler.current_user  # noqa: B018
-        return getattr(handler, "_token_authenticated", False)
+        pass
 
     def validate_security(
         self,
@@ -527,20 +356,7 @@ class IdentityProvider(LoggingConfigurable):
 
         Show messages, or abort if necessary, based on the security configuration.
         """
-        if not app.ip:
-            warning = "WARNING: The Jupyter server is listening on all IP addresses"
-            if ssl_options is None:
-                app.log.warning(f"{warning} and not using encryption. This is not recommended.")
-            if not self.auth_enabled:
-                app.log.warning(
-                    f"{warning} and not using authentication. "
-                    "This is highly insecure and not recommended."
-                )
-        elif not self.auth_enabled:
-            app.log.warning(
-                "All authentication is disabled."
-                "  Anyone who can connect to this server will be able to run code."
-            )
+        pass
 
     def process_login_form(self, handler: web.RequestHandler) -> User | None:
         """Process login form data
@@ -654,18 +470,15 @@ class PasswordIdentityProvider(IdentityProvider):
 
     def update_user_model(self, current_user: User, user_data: dict[UpdatableField, str]) -> User:
         """Update user information."""
-        for field in self.updatable_fields:
-            if field in user_data:
-                setattr(current_user, field, user_data[field])
-        return current_user
+        pass
 
     def persist_user_model(self, handler: web.RequestHandler) -> None:
         """Persist the user model to a cookie."""
-        self.set_login_cookie(handler, handler.current_user)
+        pass
 
     def passwd_check(self, password):
         """Check password against our stored hashed password"""
-        return passwd_check(self.hashed_password, password)
+        pass
 
     def process_login_form(self, handler: web.RequestHandler) -> User | None:
         """Process login form data
@@ -680,14 +493,7 @@ class PasswordIdentityProvider(IdentityProvider):
         ssl_options: dict[str, t.Any] | None = None,
     ) -> None:
         """Handle security validation."""
-        super().validate_security(app, ssl_options)
-        if self.password_required and (not self.hashed_password):
-            self.log.critical(
-                _i18n("Jupyter servers are configured to only be run with a password.")
-            )
-            self.log.critical(_i18n("Hint: run the following command to set a password"))
-            self.log.critical(_i18n("\t$ python -m jupyter_server.auth password"))
-            sys.exit(1)
+        pass
 
     def cookie_secret_hook(self, h: hmac.HMAC) -> hmac.HMAC:
         """Include password in cookie secret.
@@ -721,10 +527,7 @@ class LegacyIdentityProvider(PasswordIdentityProvider):
 
     def get_user(self, handler: web.RequestHandler) -> User | None:
         """Get the user."""
-        user = self.login_handler_class.get_user(handler)  # type:ignore[attr-defined]
-        if user is None:
-            return None
-        return _backward_compat_user(user)
+        pass
 
     @property
     def login_available(self) -> bool:
@@ -732,11 +535,11 @@ class LegacyIdentityProvider(PasswordIdentityProvider):
 
     def should_check_origin(self, handler: web.RequestHandler) -> bool:
         """Whether we should check origin."""
-        return bool(self.login_handler_class.should_check_origin(handler))  # type:ignore[attr-defined]
+        pass
 
     def is_token_authenticated(self, handler: web.RequestHandler) -> bool:
         """Whether we are token authenticated."""
-        return bool(self.login_handler_class.is_token_authenticated(handler))  # type:ignore[attr-defined]
+        pass
 
     def validate_security(
         self,
@@ -744,13 +547,4 @@ class LegacyIdentityProvider(PasswordIdentityProvider):
         ssl_options: dict[str, t.Any] | None = None,
     ) -> None:
         """Validate security."""
-        if self.password_required and (not self.hashed_password):
-            self.log.critical(
-                _i18n("Jupyter servers are configured to only be run with a password.")
-            )
-            self.log.critical(_i18n("Hint: run the following command to set a password"))
-            self.log.critical(_i18n("\t$ python -m jupyter_server.auth password"))
-            sys.exit(1)
-        self.login_handler_class.validate_security(  # type:ignore[attr-defined]
-            app, ssl_options
-        )
+        pass

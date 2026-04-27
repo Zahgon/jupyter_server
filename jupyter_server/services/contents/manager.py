@@ -70,7 +70,7 @@ class ContentsManager(LoggingConfigurable):
 
     def emit(self, data):
         """Emit event using the core event schema from Jupyter Server's Contents Manager."""
-        self.event_logger.emit(schema_id=self.event_schema_id, data=data)
+        pass
 
     root_dir = Unicode("/", config=True)
 
@@ -198,42 +198,11 @@ class ContentsManager(LoggingConfigurable):
 
     def run_pre_save_hooks(self, model, path, **kwargs):
         """Run the pre-save hooks if any, and log errors"""
-        pre_save_hooks = [self.pre_save_hook] if self.pre_save_hook is not None else []
-        pre_save_hooks += self._pre_save_hooks
-        for pre_save_hook in pre_save_hooks:
-            try:
-                self.log.debug("Running pre-save hook on %s", path)
-                pre_save_hook(model=model, path=path, contents_manager=self, **kwargs)
-            except HTTPError:
-                # allow custom HTTPErrors to raise,
-                # rejecting the save with a message.
-                raise
-            except Exception:
-                # unhandled errors don't prevent saving,
-                # which could cause frustrating data loss
-                self.log.error(
-                    "Pre-save hook %s failed on %s",
-                    pre_save_hook.__name__,
-                    path,
-                    exc_info=True,
-                )
+        pass
 
     def run_post_save_hooks(self, model, os_path):
         """Run the post-save hooks if any, and log errors"""
-        post_save_hooks = [self.post_save_hook] if self.post_save_hook is not None else []
-        post_save_hooks += self._post_save_hooks
-        for post_save_hook in post_save_hooks:
-            try:
-                self.log.debug("Running post-save hook on %s", os_path)
-                post_save_hook(os_path=os_path, model=model, contents_manager=self)
-            except Exception as e:
-                self.log.error(
-                    "Post-save %s hook failed on %s",
-                    post_save_hook.__name__,
-                    os_path,
-                    exc_info=True,
-                )
-                raise HTTPError(500, "Unexpected error while running post hook save: %s" % e) from e
+        pass
 
     checkpoints_class = Type(Checkpoints, config=True)
     checkpoints = Instance(Checkpoints, config=True)
@@ -300,7 +269,7 @@ class ContentsManager(LoggingConfigurable):
         exists : bool
             Whether the path does indeed exist.
         """
-        raise NotImplementedError
+        pass
 
     def is_hidden(self, path):
         """Is path a hidden directory or file?
@@ -317,7 +286,7 @@ class ContentsManager(LoggingConfigurable):
             Whether the path is hidden.
 
         """
-        raise NotImplementedError
+        pass
 
     def file_exists(self, path):
         """Does a file exist at the given path?
@@ -336,7 +305,7 @@ class ContentsManager(LoggingConfigurable):
         exists : bool
             Whether the file exists.
         """
-        raise NotImplementedError
+        pass
 
     def exists(self, path):
         """Does a file or directory exist at the given path?
@@ -353,7 +322,7 @@ class ContentsManager(LoggingConfigurable):
         exists : bool
             Whether the target exists.
         """
-        return self.file_exists(path) or self.dir_exists(path)
+        pass
 
     def get(self, path, content=True, type=None, format=None, require_hash=False):
         """Get a file or directory model.
@@ -365,7 +334,7 @@ class ContentsManager(LoggingConfigurable):
 
         *Changed in version 2.11*: The *require_hash* parameter was added.
         """
-        raise NotImplementedError
+        pass
 
     def save(self, model, path):
         """
@@ -375,15 +344,15 @@ class ContentsManager(LoggingConfigurable):
         should call self.run_pre_save_hook(model=model, path=path) prior to
         writing any data.
         """
-        raise NotImplementedError
+        pass
 
     def delete_file(self, path):
         """Delete the file or directory at path."""
-        raise NotImplementedError
+        pass
 
     def rename_file(self, old_path, new_path):
         """Rename a file or directory."""
-        raise NotImplementedError
+        pass
 
     # ContentsManager API part 2: methods that have usable default
     # implementations, but can be overridden in subclasses.
@@ -394,9 +363,7 @@ class ContentsManager(LoggingConfigurable):
 
     def rename(self, old_path, new_path):
         """Rename a file and any checkpoints associated with that file."""
-        self.rename_file(old_path, new_path)
-        self.checkpoints.rename_all_checkpoints(old_path, new_path)
-        self.emit(data={"action": "rename", "path": new_path, "source_path": old_path})
+        pass
 
     def update(self, model, path):
         """Update the file's path
@@ -404,16 +371,11 @@ class ContentsManager(LoggingConfigurable):
         For use in PATCH requests, to enable renaming a file without
         re-uploading its contents. Only used for renaming at the moment.
         """
-        path = path.strip("/")
-        new_path = model.get("path", path).strip("/")
-        if path != new_path:
-            self.rename(path, new_path)
-        model = self.get(new_path, content=False)
-        return model
+        pass
 
     def info_string(self):
         """The information string for the manager."""
-        return "Serving contents"
+        pass
 
     def get_kernel_path(self, path, model=None):
         """Return the API path for the kernel
@@ -425,7 +387,7 @@ class ContentsManager(LoggingConfigurable):
         notebook server. FileContentsManager overrides this to use the
         directory containing the notebook.
         """
-        return ""
+        pass
 
     def increment_filename(self, filename, path="", insert=""):
         """Increment a filename until it is unique.
@@ -444,41 +406,11 @@ class ContentsManager(LoggingConfigurable):
         name : unicode
             A filename that is unique, based on the input filename.
         """
-        # Extract the full suffix from the filename (e.g. .tar.gz)
-        path = path.strip("/")
-        basename, dot, ext = filename.rpartition(".")
-        if ext != "ipynb":
-            basename, dot, ext = filename.partition(".")
-
-        suffix = dot + ext
-
-        for i in itertools.count():
-            insert_i = f"{insert}{i}" if i else ""
-            name = f"{basename}{insert_i}{suffix}"
-            if not self.exists(f"{path}/{name}"):
-                break
-        return name
+        pass
 
     def validate_notebook_model(self, model, validation_error=None):
         """Add failed-validation message to model"""
-        try:
-            # If we're given a validation_error dictionary, extract the exception
-            # from it and raise the exception, else call nbformat's validate method
-            # to determine if the notebook is valid.  This 'else' condition may
-            # pertain to server extension not using the server's notebook read/write
-            # functions.
-            if validation_error is not None:
-                e = validation_error.get("ValidationError")
-                if isinstance(e, ValidationError):
-                    raise e
-            else:
-                validate_nb(model["content"])
-        except ValidationError as e:
-            model["message"] = "Notebook validation failed: {}:\n{}".format(
-                str(e),
-                json.dumps(e.instance, indent=1, default=lambda obj: "<UNKNOWN>"),
-            )
-        return model
+        pass
 
     def new_untitled(self, path="", type="", ext=""):
         """Create a new untitled file or directory in path
@@ -489,61 +421,14 @@ class ContentsManager(LoggingConfigurable):
 
         Use `new` to create files with a fully specified path (including filename).
         """
-        path = path.strip("/")
-        if not self.dir_exists(path):
-            raise HTTPError(404, "No such directory: %s" % path)
-
-        model = {}
-        if type:
-            model["type"] = type
-
-        if ext == ".ipynb":
-            model.setdefault("type", "notebook")
-        else:
-            model.setdefault("type", "file")
-
-        insert = ""
-        if model["type"] == "directory":
-            untitled = self.untitled_directory
-            insert = " "
-        elif model["type"] == "notebook":
-            untitled = self.untitled_notebook
-            ext = ".ipynb"
-        elif model["type"] == "file":
-            untitled = self.untitled_file
-        else:
-            raise HTTPError(400, "Unexpected model type: %r" % model["type"])
-
-        name = self.increment_filename(untitled + ext, path, insert=insert)
-        path = f"{path}/{name}"
-        return self.new(model, path)
+        pass
 
     def new(self, model=None, path=""):
         """Create a new file or directory and return its model with no content.
 
         To create a new untitled entity in a directory, use `new_untitled`.
         """
-        path = path.strip("/")
-        if model is None:
-            model = {}
-
-        if path.endswith(".ipynb"):
-            model.setdefault("type", "notebook")
-        else:
-            model.setdefault("type", "file")
-
-        # no content, not a directory, so fill out new-file model
-        if "content" not in model and model["type"] != "directory":
-            if model["type"] == "notebook":
-                model["content"] = new_notebook()
-                model["format"] = "json"
-            else:
-                model["content"] = ""
-                model["type"] = "file"
-                model["format"] = "text"
-
-        model = self.save(model, path)
-        return model
+        pass
 
     def copy(self, from_path, to_path=None):
         """Copy an existing file and return its new model.
@@ -555,41 +440,7 @@ class ContentsManager(LoggingConfigurable):
 
         from_path must be a full path to a file.
         """
-        path = from_path.strip("/")
-
-        if to_path is not None:
-            to_path = to_path.strip("/")
-
-        if "/" in path:
-            from_dir, from_name = path.rsplit("/", 1)
-        else:
-            from_dir = ""
-            from_name = path
-
-        model = self.get(path)
-        model.pop("path", None)
-        model.pop("name", None)
-        if model["type"] == "directory":
-            raise HTTPError(400, "Can't copy directories")
-
-        is_destination_specified = to_path is not None
-        if not is_destination_specified:
-            to_path = from_dir
-        if self.dir_exists(to_path):
-            name = copy_pat.sub(".", from_name)
-            to_name = self.increment_filename(name, to_path, insert="-Copy")
-            to_path = f"{to_path}/{to_name}"
-        elif is_destination_specified:
-            if "/" in to_path:
-                to_dir, to_name = to_path.rsplit("/", 1)
-                if not self.dir_exists(to_dir):
-                    raise HTTPError(404, "No such parent directory: %s to copy file in" % to_dir)
-        else:
-            raise HTTPError(404, "No such directory: %s" % to_path)
-
-        model = self.save(model, to_path)
-        self.emit(data={"action": "copy", "path": to_path, "source_path": from_path})
-        return model
+        pass
 
     def log_info(self):
         """Log the information string for the manager."""
@@ -617,10 +468,7 @@ class ContentsManager(LoggingConfigurable):
         path : str
             The notebook's path (for logging)
         """
-        if self.notary.check_cells(nb):
-            self.notary.sign(nb)
-        else:
-            self.log.warning("Notebook %s is not trusted", path)
+        pass
 
     def mark_trusted_cells(self, nb, path=""):
         """Mark cells as trusted if the notebook signature matches.
@@ -634,19 +482,16 @@ class ContentsManager(LoggingConfigurable):
         path : str
             The notebook's path (for logging)
         """
-        trusted = self.notary.check_signature(nb)
-        if not trusted:
-            self.log.warning("Notebook %s is not trusted", path)
-        self.notary.mark_cells(nb, trusted)
+        pass
 
     def should_list(self, name):
         """Should this file/directory name be displayed in a listing?"""
-        return not any(fnmatch(name, glob) for glob in self.hide_globs)
+        pass
 
     # Part 3: Checkpoints API
     def create_checkpoint(self, path):
         """Create a checkpoint."""
-        return self.checkpoints.create_checkpoint(self, path)
+        pass
 
     def restore_checkpoint(self, checkpoint_id, path):
         """
@@ -655,7 +500,7 @@ class ContentsManager(LoggingConfigurable):
         pass
 
     def list_checkpoints(self, path):
-        return self.checkpoints.list_checkpoints(path)
+        pass
 
     def delete_checkpoint(self, checkpoint_id, path):
         pass
@@ -696,7 +541,7 @@ class AsyncContentsManager(ContentsManager):
         exists : bool
             Whether the path does indeed exist.
         """
-        raise NotImplementedError
+        pass
 
     async def is_hidden(self, path):
         """Is path a hidden directory or file?
@@ -713,7 +558,7 @@ class AsyncContentsManager(ContentsManager):
             Whether the path is hidden.
 
         """
-        raise NotImplementedError
+        pass
 
     async def file_exists(self, path):
         """Does a file exist at the given path?
@@ -732,7 +577,7 @@ class AsyncContentsManager(ContentsManager):
         exists : bool
             Whether the file exists.
         """
-        raise NotImplementedError
+        pass
 
     async def exists(self, path):
         """Does a file or directory exist at the given path?
@@ -749,9 +594,7 @@ class AsyncContentsManager(ContentsManager):
         exists : bool
             Whether the target exists.
         """
-        return await ensure_async(self.file_exists(path)) or await ensure_async(
-            self.dir_exists(path)
-        )
+        pass
 
     async def get(self, path, content=True, type=None, format=None, require_hash=False):
         """Get a file or directory model.
@@ -763,7 +606,7 @@ class AsyncContentsManager(ContentsManager):
 
         *Changed in version 2.11*: The *require_hash* parameter was added.
         """
-        raise NotImplementedError
+        pass
 
     async def save(self, model, path):
         """
@@ -773,15 +616,15 @@ class AsyncContentsManager(ContentsManager):
         should call self.run_pre_save_hook(model=model, path=path) prior to
         writing any data.
         """
-        raise NotImplementedError
+        pass
 
     async def delete_file(self, path):
         """Delete the file or directory at path."""
-        raise NotImplementedError
+        pass
 
     async def rename_file(self, old_path, new_path):
         """Rename a file or directory."""
-        raise NotImplementedError
+        pass
 
     # ContentsManager API part 2: methods that have usable default
     # implementations, but can be overridden in subclasses.
@@ -792,9 +635,7 @@ class AsyncContentsManager(ContentsManager):
 
     async def rename(self, old_path, new_path):
         """Rename a file and any checkpoints associated with that file."""
-        await self.rename_file(old_path, new_path)
-        await self.checkpoints.rename_all_checkpoints(old_path, new_path)
-        self.emit(data={"action": "rename", "path": new_path, "source_path": old_path})
+        pass
 
     async def update(self, model, path):
         """Update the file's path
@@ -802,12 +643,7 @@ class AsyncContentsManager(ContentsManager):
         For use in PATCH requests, to enable renaming a file without
         re-uploading its contents. Only used for renaming at the moment.
         """
-        path = path.strip("/")
-        new_path = model.get("path", path).strip("/")
-        if path != new_path:
-            await self.rename(path, new_path)
-        model = await self.get(new_path, content=False)
-        return model
+        pass
 
     async def increment_filename(self, filename, path="", insert=""):
         """Increment a filename until it is unique.
@@ -826,21 +662,7 @@ class AsyncContentsManager(ContentsManager):
         name : unicode
             A filename that is unique, based on the input filename.
         """
-        # Extract the full suffix from the filename (e.g. .tar.gz)
-        path = path.strip("/")
-        basename, dot, ext = filename.rpartition(".")
-        if ext != "ipynb":
-            basename, dot, ext = filename.partition(".")
-
-        suffix = dot + ext
-
-        for i in itertools.count():
-            insert_i = f"{insert}{i}" if i else ""
-            name = f"{basename}{insert_i}{suffix}"
-            file_exists = await ensure_async(self.exists(f"{path}/{name}"))
-            if not file_exists:
-                break
-        return name
+        pass
 
     async def new_untitled(self, path="", type="", ext=""):
         """Create a new untitled file or directory in path
@@ -851,62 +673,14 @@ class AsyncContentsManager(ContentsManager):
 
         Use `new` to create files with a fully specified path (including filename).
         """
-        path = path.strip("/")
-        dir_exists = await ensure_async(self.dir_exists(path))
-        if not dir_exists:
-            raise HTTPError(404, "No such directory: %s" % path)
-
-        model = {}
-        if type:
-            model["type"] = type
-
-        if ext == ".ipynb":
-            model.setdefault("type", "notebook")
-        else:
-            model.setdefault("type", "file")
-
-        insert = ""
-        if model["type"] == "directory":
-            untitled = self.untitled_directory
-            insert = " "
-        elif model["type"] == "notebook":
-            untitled = self.untitled_notebook
-            ext = ".ipynb"
-        elif model["type"] == "file":
-            untitled = self.untitled_file
-        else:
-            raise HTTPError(400, "Unexpected model type: %r" % model["type"])
-
-        name = await self.increment_filename(untitled + ext, path, insert=insert)
-        path = f"{path}/{name}"
-        return await self.new(model, path)
+        pass
 
     async def new(self, model=None, path=""):
         """Create a new file or directory and return its model with no content.
 
         To create a new untitled entity in a directory, use `new_untitled`.
         """
-        path = path.strip("/")
-        if model is None:
-            model = {}
-
-        if path.endswith(".ipynb"):
-            model.setdefault("type", "notebook")
-        else:
-            model.setdefault("type", "file")
-
-        # no content, not a directory, so fill out new-file model
-        if "content" not in model and model["type"] != "directory":
-            if model["type"] == "notebook":
-                model["content"] = new_notebook()
-                model["format"] = "json"
-            else:
-                model["content"] = ""
-                model["type"] = "file"
-                model["format"] = "text"
-
-        model = await self.save(model, path)
-        return model
+        pass
 
     async def copy(self, from_path, to_path=None):
         """Copy an existing file and return its new model.
@@ -918,41 +692,7 @@ class AsyncContentsManager(ContentsManager):
 
         from_path must be a full path to a file.
         """
-        path = from_path.strip("/")
-
-        if to_path is not None:
-            to_path = to_path.strip("/")
-
-        if "/" in path:
-            from_dir, from_name = path.rsplit("/", 1)
-        else:
-            from_dir = ""
-            from_name = path
-
-        model = await self.get(path)
-        model.pop("path", None)
-        model.pop("name", None)
-        if model["type"] == "directory":
-            raise HTTPError(400, "Can't copy directories")
-
-        is_destination_specified = to_path is not None
-        if not is_destination_specified:
-            to_path = from_dir
-        if await ensure_async(self.dir_exists(to_path)):
-            name = copy_pat.sub(".", from_name)
-            to_name = await self.increment_filename(name, to_path, insert="-Copy")
-            to_path = f"{to_path}/{to_name}"
-        elif is_destination_specified:
-            if "/" in to_path:
-                to_dir, to_name = to_path.rsplit("/", 1)
-                if not await ensure_async(self.dir_exists(to_dir)):
-                    raise HTTPError(404, "No such parent directory: %s to copy file in" % to_dir)
-        else:
-            raise HTTPError(404, "No such directory: %s" % to_path)
-
-        model = await self.save(model, to_path)
-        self.emit(data={"action": "copy", "path": to_path, "source_path": from_path})
-        return model
+        pass
 
     async def trust_notebook(self, path):
         """Explicitly trust a notebook
@@ -967,7 +707,7 @@ class AsyncContentsManager(ContentsManager):
     # Part 3: Checkpoints API
     async def create_checkpoint(self, path):
         """Create a checkpoint."""
-        return await self.checkpoints.create_checkpoint(self, path)
+        pass
 
     async def restore_checkpoint(self, checkpoint_id, path):
         """
@@ -977,7 +717,7 @@ class AsyncContentsManager(ContentsManager):
 
     async def list_checkpoints(self, path):
         """List the checkpoints for a path."""
-        return await self.checkpoints.list_checkpoints(path)
+        pass
 
     async def delete_checkpoint(self, checkpoint_id, path):
         """Delete a checkpoint for a path by id."""

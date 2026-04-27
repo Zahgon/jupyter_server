@@ -78,17 +78,7 @@ class KernelSessionRecord:  # noqa: PLW1641 - TODO: implement __hash__
 
     def update(self, other: "KernelSessionRecord") -> None:
         """Updates in-place a kernel from other (only accepts positive updates"""
-        if not isinstance(other, KernelSessionRecord):
-            msg = "'other' must be an instance of KernelSessionRecord."  # type:ignore[unreachable]
-            raise TypeError(msg)
-
-        if other.kernel_id and self.kernel_id and other.kernel_id != self.kernel_id:
-            msg = "Could not update the record from 'other' because the two records conflict."
-            raise KernelSessionRecordConflict(msg)
-
-        for field in fields(self):
-            if hasattr(other, field.name) and getattr(other, field.name):
-                setattr(self, field.name, getattr(other, field.name))
+        pass
 
 
 class KernelSessionRecordList:
@@ -131,31 +121,17 @@ class KernelSessionRecordList:
         """Return a full KernelSessionRecord from a session_id, kernel_id, or
         incomplete KernelSessionRecord.
         """
-        if isinstance(record, str):
-            for r in self._records:
-                if record in (r.kernel_id, r.session_id):
-                    return r
-        elif isinstance(record, KernelSessionRecord):
-            for r in self._records:
-                if record == r:
-                    return record
-        msg = f"{record} not found in KernelSessionRecordList."
-        raise ValueError(msg)
+        pass
 
     def update(self, record: KernelSessionRecord) -> None:
         """Update a record in-place or append it if not in the list."""
-        try:
-            idx = self._records.index(record)
-            self._records[idx].update(record)
-        except ValueError:
-            self._records.append(record)
+        pass
 
     def remove(self, record: KernelSessionRecord) -> None:
         """Remove a record if its found in the list. If it's not found,
         do nothing.
         """
-        if record in self._records:
-            self._records.remove(record)
+        pass
 
 
 class SessionManager(LoggingConfigurable):
@@ -206,9 +182,7 @@ class SessionManager(LoggingConfigurable):
 
     def close(self):
         """Close the sqlite connection"""
-        if self._cursor is not None:
-            self._cursor.close()
-            self._cursor = None
+        pass
 
     def __del__(self):
         """Close connection once SessionManager closes"""
@@ -253,11 +227,7 @@ class SessionManager(LoggingConfigurable):
             Here the name is likely to be the name of the associated file
             with the current kernel at startup time.
         """
-        if name is not None:
-            cwd = self.kernel_manager.cwd_for_path(path)
-            path = os.path.join(cwd, name)
-        assert isinstance(path, str)
-        return {**os.environ, "JPY_SESSION_NAME": path}
+        pass
 
     async def start_kernel_for_session(
         self,
@@ -283,16 +253,7 @@ class SessionManager(LoggingConfigurable):
         kernel_name : str
             the name of the kernel specification to use.  The default kernel name will be used if not provided.
         """
-        # allow contents manager to specify kernels cwd
-        kernel_path = await ensure_async(self.contents_manager.get_kernel_path(path=path))
-
-        kernel_env = self.get_kernel_env(path, name)
-        kernel_id = await self.kernel_manager.start_kernel(
-            path=kernel_path,
-            kernel_name=kernel_name,
-            env=kernel_env,
-        )
-        return cast("str", kernel_id)
+        pass
 
     async def save_session(self, session_id, path=None, name=None, type=None, kernel_id=None):
         """Saves the items for the session with the given session_id
@@ -339,38 +300,7 @@ class SessionManager(LoggingConfigurable):
             returns a dictionary that includes all the information from the
             session described by the kwarg.
         """
-        if not kwargs:
-            msg = "must specify a column to query"
-            raise TypeError(msg)
-
-        conditions = []
-        for column in kwargs:
-            if column not in self._columns:
-                msg = f"No such column: {column}"
-                raise TypeError(msg)
-            conditions.append("%s=?" % column)
-
-        query = "SELECT * FROM session WHERE %s" % (" AND ".join(conditions))  # noqa: S608
-
-        self.cursor.execute(query, list(kwargs.values()))
-        try:
-            row = self.cursor.fetchone()
-        except KeyError:
-            # The kernel is missing, so the session just got deleted.
-            row = None
-
-        if row is None:
-            q = []
-            for key, value in kwargs.items():
-                q.append(f"{key}={value!r}")
-
-            raise web.HTTPError(404, "Session not found: %s" % (", ".join(q)))
-
-        try:
-            model = await self.row_to_model(row)
-        except KeyError as e:
-            raise web.HTTPError(404, "Session not found: %s" % str(e)) from e
-        return model
+        pass
 
     async def update_session(self, session_id, **kwargs):
         """Updates the values in the session database.
@@ -387,81 +317,20 @@ class SessionManager(LoggingConfigurable):
             and the value replaces the current value in the session
             with session_id.
         """
-        await self.get_session(session_id=session_id)
-
-        if not kwargs:
-            # no changes
-            return
-
-        sets = []
-        for column in kwargs:
-            if column not in self._columns:
-                raise TypeError("No such column: %r" % column)
-            sets.append("%s=?" % column)
-        query = "UPDATE session SET %s WHERE session_id=?" % (", ".join(sets))  # noqa: S608
-        self.cursor.execute(query, [*list(kwargs.values()), session_id])
-
-        if hasattr(self.kernel_manager, "update_env"):
-            self.cursor.execute(
-                "SELECT path, name, kernel_id FROM session WHERE session_id=?", [session_id]
-            )
-            path, name, kernel_id = self.cursor.fetchone()
-            self.kernel_manager.update_env(kernel_id=kernel_id, env=self.get_kernel_env(path, name))
+        pass
 
     async def kernel_culled(self, kernel_id: str) -> bool:
         """Checks if the kernel is still considered alive and returns true if its not found."""
-        return kernel_id not in self.kernel_manager
+        pass
 
     async def row_to_model(self, row, tolerate_culled=False):
         """Takes sqlite database session row and turns it into a dictionary"""
-        kernel_culled: bool = await ensure_async(self.kernel_culled(row["kernel_id"]))
-        if kernel_culled:
-            # The kernel was culled or died without deleting the session.
-            # We can't use delete_session here because that tries to find
-            # and shut down the kernel - so we'll delete the row directly.
-            #
-            # If caller wishes to tolerate culled kernels, log a warning
-            # and return None.  Otherwise, raise KeyError with a similar
-            # message.
-            self.cursor.execute("DELETE FROM session WHERE session_id=?", (row["session_id"],))
-            msg = (
-                "Kernel '{kernel_id}' appears to have been culled or died unexpectedly, "
-                "invalidating session '{session_id}'. The session has been removed.".format(
-                    kernel_id=row["kernel_id"], session_id=row["session_id"]
-                )
-            )
-            if tolerate_culled:
-                self.log.warning(f"{msg}  Continuing...")
-                return None
-            raise KeyError(msg)
-
-        kernel_model = await ensure_async(self.kernel_manager.kernel_model(row["kernel_id"]))
-        model = {
-            "id": row["session_id"],
-            "path": row["path"],
-            "name": row["name"],
-            "type": row["type"],
-            "kernel": kernel_model,
-        }
-        if row["type"] == "notebook":
-            # Provide the deprecated API.
-            model["notebook"] = {"path": row["path"], "name": row["name"]}
-        return model
+        pass
 
     async def list_sessions(self):
         """Returns a list of dictionaries containing all the information from
         the session database"""
-        c = self.cursor.execute("SELECT * FROM session")
-        result = []
-        # We need to use fetchall() here, because row_to_model can delete rows,
-        # which messes up the cursor if we're iterating over rows.
-        for row in c.fetchall():
-            try:
-                model = await self.row_to_model(row)
-                result.append(model)
-            except KeyError:
-                pass
-        return result
+        pass
 
     async def delete_session(self, session_id):
         """Deletes the row in the session database with given session_id"""

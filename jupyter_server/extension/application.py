@@ -27,19 +27,7 @@ from .handler import ExtensionHandlerMixin
 
 def _preparse_for_subcommand(application_klass, argv):
     """Preparse command line to look for subcommands."""
-    # Read in arguments from command line.
-    if len(argv) == 0:
-        return None
-
-    # Find any subcommands.
-    if application_klass.subcommands and len(argv) > 0:
-        # we have subcommands, and one may have been specified
-        subc, subargv = argv[0], argv[1:]
-        if re.match(r"^\w(\-?\w)*$", subc) and subc in application_klass.subcommands:
-            # it's a subcommand, and *not* a flag or class parameter
-            app = application_klass()
-            app.initialize_subcommand(subc, subargv)
-            return app.subapp
+    pass
 
 
 def _preparse_for_stopping_flags(application_klass, argv):
@@ -51,32 +39,7 @@ def _preparse_for_stopping_flags(application_klass, argv):
     the command line multiple times, but want to control when
     when 'help' and 'version' is raised.
     """
-    # Arguments after a '--' argument are for the script IPython may be
-    # about to run, not IPython iteslf. For arguments parsed here (help and
-    # version), we want to only search the arguments up to the first
-    # occurrence of '--', which we're calling interpreted_argv.
-    try:
-        interpreted_argv = argv[: argv.index("--")]
-    except ValueError:
-        interpreted_argv = argv
-
-    # Catch any help calls.
-    if any(x in interpreted_argv for x in ("-h", "--help-all", "--help")):
-        app = application_klass()
-        app.print_help("--help-all" in interpreted_argv)
-        app.exit(0)
-
-    # Catch version commands
-    if "--version" in interpreted_argv or "-V" in interpreted_argv:
-        app = application_klass()
-        app.print_version()
-        app.exit(0)
-
-    # Catch generate-config commands.
-    if "--generate-config" in interpreted_argv:
-        app = application_klass()
-        app.write_default_config()
-        app.exit(0)
+    pass
 
 
 class ExtensionAppJinjaMixin(HasTraits):
@@ -92,21 +55,7 @@ class ExtensionAppJinjaMixin(HasTraits):
     @t.no_type_check
     def _prepare_templates(self):
         """Get templates defined in a subclass."""
-        self.initialize_templates()
-        # Add templates to web app settings if extension has templates.
-        if len(self.template_paths) > 0:
-            self.settings.update({f"{self.name}_template_paths": self.template_paths})
-
-        # Create a jinja environment for logging html templates.
-        self.jinja2_env = Environment(
-            loader=FileSystemLoader(self.template_paths),
-            extensions=["jinja2.ext.i18n"],
-            autoescape=True,
-            **self.jinja2_options,
-        )
-
-        # Add the jinja2 environment for this extension to the tornado settings.
-        self.settings.update({f"{self.name}_jinja2_env": self.jinja2_env})
+        pass
 
 
 # -----------------------------------------------------------------------------
@@ -177,11 +126,7 @@ class ExtensionApp(JupyterApp):
     @classmethod
     def get_extension_package(cls):
         """Get an extension package."""
-        parts = cls.__module__.split(".")
-        if is_namespace_package(parts[0]):
-            # in this case the package name is `<namespace>.<package>`.
-            return ".".join(parts[0:2])
-        return parts[0]
+        pass
 
     @classmethod
     def get_extension_point(cls):
@@ -275,79 +220,19 @@ class ExtensionApp(JupyterApp):
         """Builds a Config object from the extension's traits and passes
         the object to the webapp's settings as `<name>_config`.
         """
-        traits = self.class_own_traits().keys()
-        self.extension_config = Config({t: getattr(self, t) for t in traits})
-        self.settings[f"{self.name}_config"] = self.extension_config
+        pass
 
     def _prepare_settings(self):
         """Prepare the settings."""
-        # Make webapp settings accessible to initialize_settings method
-        assert self.serverapp is not None
-        webapp = self.serverapp.web_app
-        self.settings.update(**webapp.settings)
-
-        # Add static and template paths to settings.
-        self.settings.update(
-            {
-                f"{self.name}_static_paths": self.static_paths,
-                f"{self.name}": self,
-            }
-        )
-
-        # Get setting defined by subclass using initialize_settings method.
-        self.initialize_settings()
-
-        # Update server settings with extension settings.
-        webapp.settings.update(**self.settings)
+        pass
 
     def _prepare_handlers(self):
         """Prepare the handlers."""
-        assert self.serverapp is not None
-        webapp = self.serverapp.web_app
-
-        # Get handlers defined by extension subclass.
-        self.initialize_handlers()
-
-        # prepend base_url onto the patterns that we match
-        new_handlers = []
-        for handler_items in self.handlers:
-            # Build url pattern including base_url
-            pattern = url_path_join(webapp.settings["base_url"], handler_items[0])
-            handler = handler_items[1]
-
-            # Get handler kwargs, if given
-            kwargs: dict[str, t.Any] = {}
-            if issubclass(handler, ExtensionHandlerMixin):
-                kwargs["name"] = self.name
-
-            try:
-                kwargs.update(handler_items[2])
-            except IndexError:
-                pass
-
-            new_handler = (pattern, handler, kwargs)
-            new_handlers.append(new_handler)
-
-        # Add static endpoint for this extension, if static paths are given.
-        if len(self.static_paths) > 0:
-            # Append the extension's static directory to server handlers.
-            static_url = url_path_join(self.static_url_prefix, "(.*)")
-
-            # Construct handler.
-            handler = (
-                static_url,
-                webapp.settings["static_handler_class"],
-                {"path": self.static_paths},
-            )
-            new_handlers.append(handler)
-
-        webapp.add_handlers(".*$", new_handlers)
+        pass
 
     def _prepare_templates(self):
         """Add templates to web app settings if extension has templates."""
-        if len(self.template_paths) > 0:
-            self.settings.update({f"{self.name}_template_paths": self.template_paths})
-        self.initialize_templates()
+        pass
 
     def _jupyter_server_config(self):
         """The jupyter server config."""
@@ -366,26 +251,7 @@ class ExtensionApp(JupyterApp):
         Web Application yet, so do not try to affect the
         `web_app` attribute.
         """
-        self.serverapp = serverapp
-        # Load config from an ExtensionApp's config files.
-        self.load_config_file()
-        # ServerApp's config might have picked up
-        # config for the ExtensionApp. We call
-        # update_config to update ExtensionApp's
-        # traits with these values found in ServerApp's
-        # config.
-        # ServerApp config ---> ExtensionApp traits
-        self.update_config(self.serverapp.config)
-        # Use ExtensionApp's CLI parser to find any extra
-        # args that passed through ServerApp and
-        # now belong to ExtensionApp.
-        self.parse_command_line(self.serverapp.extra_args)
-        # If any config should be passed upstream to the
-        # ServerApp, do it here.
-        # i.e. ServerApp traits <--- ExtensionApp config
-        self.serverapp.update_config(self.config)
-        # Acknowledge that this extension has been linked.
-        self._linked = True
+        pass
 
     def initialize(self):  # type: ignore[override]
         """Initialize the extension app. The
@@ -397,28 +263,14 @@ class ExtensionApp(JupyterApp):
           to the Tornado web application
         - Points Tornado Webapp to templates and static assets.
         """
-        if not self.serverapp:
-            msg = (
-                "This extension has no attribute `serverapp`. "
-                "Try calling `.link_to_serverapp()` before calling "
-                "`.initialize()`."
-            )
-            raise JupyterServerExtensionException(msg)
-
-        self._prepare_config()
-        self._prepare_templates()
-        self._prepare_settings()
-        self._prepare_handlers()
+        pass
 
     def start(self):
         """Start the underlying Jupyter server.
 
         Server should be started after extension is initialized.
         """
-        super().start()
-        # Start the server.
-        assert self.serverapp is not None
-        self.serverapp.start()
+        pass
 
     def current_activity(self):
         """Return a list of activity happening in this extension."""
@@ -436,16 +288,7 @@ class ExtensionApp(JupyterApp):
         """Initialize and configure this extension, then add the extension's
         settings and handlers to the server's web application.
         """
-        extension_manager = serverapp.extension_manager
-        try:
-            # Get loaded extension from serverapp.
-            point = extension_manager.extension_points[cls.name]
-            extension = point.app
-        except KeyError:
-            extension = cls()
-            extension._link_jupyter_server_extension(serverapp)
-        extension.initialize()
-        return extension
+        pass
 
     async def _start_jupyter_server_extension(self, serverapp):
         """
@@ -472,7 +315,7 @@ class ExtensionApp(JupyterApp):
 
         Override to customize the ServerApp before it loads any configuration
         """
-        return cls.serverapp_class.instance(**kwargs)
+        pass
 
     @classmethod
     def initialize_server(cls, argv=None, load_other_extensions=True, **kwargs):
@@ -483,20 +326,7 @@ class ExtensionApp(JupyterApp):
         The `launch_instance` method uses this method to initialize
         and start a server.
         """
-        jpserver_extensions = {cls.get_extension_package(): True}
-        find_extensions = cls.load_other_extensions
-        if "jpserver_extensions" in cls.serverapp_config:
-            jpserver_extensions.update(cls.serverapp_config["jpserver_extensions"])
-            cls.serverapp_config["jpserver_extensions"] = jpserver_extensions
-            find_extensions = False
-        serverapp = cls.make_serverapp(jpserver_extensions=jpserver_extensions, **kwargs)
-        serverapp.aliases.update(cls.aliases)
-        serverapp.initialize(
-            argv=argv or [],
-            starter_extension=cls.name,
-            find_extensions=find_extensions,
-        )
-        return serverapp
+        pass
 
     @classmethod
     def launch_instance(cls, argv=None, **kwargs):
@@ -504,30 +334,4 @@ class ExtensionApp(JupyterApp):
         and appends the extension to the server. Then starts the server and routes to
         extension's landing page.
         """
-        # Handle arguments.
-        if argv is None:  # noqa: SIM108
-            args = sys.argv[1:]  # slice out extension config.
-        else:
-            args = argv
-
-        # Handle all "stops" that could happen before
-        # continuing to launch a server+extension.
-        subapp = _preparse_for_subcommand(cls, args)
-        if subapp:
-            subapp.start()
-            return
-
-        # Check for help, version, and generate-config arguments
-        # before initializing server to make sure these
-        # arguments trigger actions from the extension not the server.
-        _preparse_for_stopping_flags(cls, args)
-        serverapp = cls.initialize_server(argv=args)
-
-        # Log if extension is blocking other extensions from loading.
-        if not cls.load_other_extensions:
-            serverapp.log.info(f"{cls.name} is running without loading other extensions.")
-        # Start the server.
-        try:
-            serverapp.start()
-        except NoStart:
-            pass
+        pass

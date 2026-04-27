@@ -38,11 +38,7 @@ from .base import (
 
 def _ensure_future(f):
     """Wrap a concurrent future as an asyncio future if there is a running loop."""
-    try:
-        asyncio.get_running_loop()
-        return asyncio.wrap_future(f)
-    except RuntimeError:
-        return f
+    pass
 
 
 class ZMQChannelsWebsocketConnection(BaseKernelWebsocketConnection):
@@ -143,11 +139,7 @@ class ZMQChannelsWebsocketConnection(BaseKernelWebsocketConnection):
 
     def create_stream(self):
         """Create a stream."""
-        identity = self.session.bsession
-        for channel in ("iopub", "shell", "control", "stdin"):
-            meth = getattr(self.kernel_manager, "connect_" + channel)
-            self.channels[channel] = stream = meth(identity=identity)
-            stream.channel = channel
+        pass
 
     def nudge(self):
         """Nudge the zmq connections with kernel_info_requests
@@ -157,314 +149,7 @@ class ZMQChannelsWebsocketConnection(BaseKernelWebsocketConnection):
         sockets are fully connected, and kernel is responsive.
         Keeps retrying kernel_info_request until these are both received.
         """
-        # Do not nudge busy kernels as kernel info requests sent to shell are
-        # queued behind execution requests.
-        # nudging in this case would cause a potentially very long wait
-        # before connections are opened,
-        # plus it is *very* unlikely that a busy kernel will not finish
-        # establishing its zmq subscriptions before processing the next request.
-        if getattr(self.kernel_manager, "execution_state", None) == "busy":
-            self.log.debug("Nudge: not nudging busy kernel %s", self.kernel_id)
-            f: asyncio.Future[t.Any] = asyncio.Future()
-            f.set_result(None)
-            return f
-        # Use a transient shell channel to prevent leaking
-        # shell responses to the front-end.
-        shell_channel = self.kernel_manager.connect_shell()
-        # Use a transient control channel to prevent leaking
-        # control responses to the front-end.
-        control_channel = self.kernel_manager.connect_control()
-        # The IOPub used by the client, whose subscriptions we are verifying.
-        iopub_channel = self.channels["iopub"]
-
-        async def wait_for_activity():
-            execution_state = getattr(self.kernel_manager, "execution_state", None)
-            while execution_state == "starting":
-                await asyncio.sleep(0.05)
-                execution_state = getattr(self.kernel_manager, "execution_state", None)
-            self.log.debug("Nudge: %s execution_state=%s", self.kernel_id, execution_state)
-
-        info_future: asyncio.Future[t.Any] = asyncio.Future()
-        iopub_future: asyncio.Future[t.Any] = asyncio.Future()
-        futures = [info_future, iopub_future]
-        futures.append(asyncio.ensure_future(wait_for_activity()))
-        all_done = asyncio.ensure_future(asyncio.gather(*futures))
-
-        def finish(_=None):
-            """Ensure all futures are resolved
-            which in turn triggers cleanup
-            """
-            for f in futures:
-                if not f.done():
-                    f.cancel()
-
-        def cleanup(_=None):
-            """Common cleanup"""
-            pass
-
-        # trigger cleanup when both message futures are resolved
-        all_done.add_done_callback(cleanup)
-
-        def on_shell_reply(msg):
-            """Handle nudge shell replies."""
-            pass
-
-        def on_control_reply(msg):
-            """Handle nudge control replies."""
-            pass
-
-        def on_iopub(msg):
-            """Handle nudge iopub replies."""
-            pass
-
-        iopub_channel.on_recv(on_iopub)
-        shell_channel.on_recv(on_shell_reply)
-        control_channel.on_recv(on_control_reply)
-        loop = IOLoop.current()
-
-        # Nudge the kernel with kernel info requests until we get an IOPub message
-        def nudge(count):
-            """Nudge the kernel."""
-            count += 1
-            # check for stopped kernel
-            if self.kernel_id not in self.multi_kernel_manager:
-                self.log.debug("Nudge: cancelling on stopped kernel: %s", self.kernel_id)
-                finish()
-                return
-
-            # check for closed zmq socket
-            if shell_channel.closed():
-                self.log.debug("Nudge: cancelling on closed zmq socket: %s", self.kernel_id)
-                finish()
-                return
-
-            # check for closed zmq socket
-            if control_channel.closed():
-                self.log.debug("Nudge: cancelling on closed zmq socket: %s", self.kernel_id)
-                finish()
-                return
-
-            if not all_done.done():
-                log = self.log.warning if count % 10 == 0 else self.log.debug
-                log(f"Nudge: attempt {count} on kernel {self.kernel_id}")
-                self.session.send(shell_channel, "kernel_info_request")
-                self.session.send(control_channel, "kernel_info_request")
-                nonlocal nudge_handle  # type: ignore[misc]
-                nudge_handle = loop.call_later(0.5, nudge, count)
-
-        nudge_handle = loop.call_later(0, nudge, count=0)
-
-        # resolve with a timeout if we get no response
-        async def finish_nudge():
-            try:
-                await asyncio.wait_for(all_done, timeout=self.kernel_info_timeout)
-            except asyncio.CancelledError:
-                pass
-            finally:
-                # make sure everybody gets cancelled, just in case
-                finish()
-
-        return asyncio.ensure_future(finish_nudge())
-
-    async def _register_session(self):
-        """Ensure we aren't creating a duplicate session.
-
-        If a previous identical session is still open, close it to avoid collisions.
-        This is likely due to a client reconnecting from a lost network connection,
-        where the socket on our side has not been cleaned up yet.
-        """
-        self.session_key = f"{self.kernel_id}:{self.session.session}"
-        stale_handler = self._open_sessions.get(self.session_key)
-        if stale_handler:
-            self.log.warning("Replacing stale connection: %s", self.session_key)
-            stale_handler.close()
-        if (
-            self.kernel_id in self.multi_kernel_manager
-        ):  # only update open sessions if kernel is actively managed
-            self._open_sessions[self.session_key] = self.websocket_handler
-
-    async def prepare(self):
-        """Prepare a kernel connection."""
-        # check session collision:
-        await self._register_session()
-        # then request kernel info, waiting up to a certain time before giving up.
-        # We don't want to wait forever, because browsers don't take it well when
-        # servers never respond to websocket connection requests.
-
-        if hasattr(self.kernel_manager, "ready"):
-            ready = self.kernel_manager.ready
-            if not isinstance(ready, asyncio.Future):
-                ready = asyncio.wrap_future(ready)
-            try:
-                await ready
-            except Exception as e:
-                self.kernel_manager.execution_state = "dead"
-                self.kernel_manager.reason = str(e)
-                raise web.HTTPError(500, str(e)) from e
-
-        t0 = time.time()
-        while not await ensure_async(self.kernel_manager.is_alive()):
-            await asyncio.sleep(0.1)
-            if (time.time() - t0) > self.multi_kernel_manager.kernel_info_timeout:
-                msg = "Kernel never reached an 'alive' state."
-                raise TimeoutError(msg)
-
-        self.session.key = self.kernel_manager.session.key
-        future = self.request_kernel_info()
-
-        def give_up():
-            """Don't wait forever for the kernel to reply"""
-            pass
-
-        loop = IOLoop.current()
-        loop.add_timeout(loop.time() + self.kernel_info_timeout, give_up)
-        # actually wait for it
-        await asyncio.wrap_future(future)
-
-    def connect(self):
-        """Handle a connection."""
-        self.multi_kernel_manager.notify_connect(self.kernel_id)
-
-        # on new connections, flush the message buffer
-        buffer_info = self.multi_kernel_manager.get_buffer(self.kernel_id, self.session_key)
-        if buffer_info and buffer_info["session_key"] == self.session_key:
-            self.log.info("Restoring connection for %s", self.session_key)
-            if self.multi_kernel_manager.ports_changed(self.kernel_id):
-                # If the kernel's ports have changed (some restarts trigger this)
-                # then reset the channels so nudge() is using the correct iopub channel
-                self.create_stream()
-            else:
-                # The kernel's ports have not changed; use the channels captured in the buffer
-                self.channels = buffer_info["channels"]
-
-            connected = self.nudge()
-
-            def replay(value):
-                pass
-
-            connected.add_done_callback(replay)
-        else:
-            try:
-                self.create_stream()
-                connected = self.nudge()
-            except web.HTTPError as e:
-                # Do not log error if the kernel is already shutdown,
-                # as it's normal that it's not responding
-                try:
-                    self.multi_kernel_manager.get_kernel(self.kernel_id)
-                    self.log.error("Error opening stream: %s", e)
-                except KeyError:
-                    pass
-                # WebSockets don't respond to traditional error codes so we
-                # close the connection.
-                for stream in self.channels.values():
-                    if not stream.closed():
-                        stream.close()
-                self.disconnect()
-                return None
-
-        self.multi_kernel_manager.add_restart_callback(self.kernel_id, self.on_kernel_restarted)
-        self.multi_kernel_manager.add_restart_callback(
-            self.kernel_id, self.on_restart_failed, "dead"
-        )
-
-        def subscribe(value):
-            pass
-
-        connected.add_done_callback(subscribe)
-        ZMQChannelsWebsocketConnection._open_sockets.add(self)
-        return connected
-
-    def close(self):
-        """Close the connection."""
-        return self.disconnect()
-
-    def disconnect(self):
-        """Handle a disconnect."""
-        self.log.debug("Websocket closed %s", self.session_key)
-        # unregister myself as an open session (only if it's really me)
-        if self._open_sessions.get(self.session_key) is self.websocket_handler:
-            self._open_sessions.pop(self.session_key)
-
-        if self.kernel_id in self.multi_kernel_manager:
-            self.multi_kernel_manager.notify_disconnect(self.kernel_id)
-            self.multi_kernel_manager.remove_restart_callback(
-                self.kernel_id,
-                self.on_kernel_restarted,
-            )
-            self.multi_kernel_manager.remove_restart_callback(
-                self.kernel_id,
-                self.on_restart_failed,
-                "dead",
-            )
-
-            # start buffering instead of closing if this was the last connection
-            if (
-                self.kernel_id in self.multi_kernel_manager._kernel_connections
-                and self.multi_kernel_manager._kernel_connections[self.kernel_id] == 0
-            ):
-                self.multi_kernel_manager.start_buffering(
-                    self.kernel_id, self.session_key, self.channels
-                )
-                ZMQChannelsWebsocketConnection._open_sockets.remove(self)
-                self._close_future.set_result(None)
-                return
-
-        # This method can be called twice, once by self.kernel_died and once
-        # from the WebSocket close event. If the WebSocket connection is
-        # closed before the ZMQ streams are setup, they could be None.
-        for stream in self.channels.values():
-            if stream is not None and not stream.closed():
-                stream.on_recv(None)
-                stream.close()
-
-        self.channels = {}
-        try:
-            ZMQChannelsWebsocketConnection._open_sockets.remove(self)
-            self._close_future.set_result(None)
-        except Exception:
-            pass
-
-    def handle_incoming_message(self, incoming_msg: str) -> None:
-        """Handle incoming messages from Websocket to ZMQ Sockets."""
         pass
-
-    def handle_outgoing_message(self, stream: str, outgoing_msg: list[t.Any]) -> None:
-        """Handle the outgoing messages from ZMQ sockets to Websocket."""
-        msg_list = outgoing_msg
-        _, fed_msg_list = self.session.feed_identities(msg_list)
-
-        if self.subprotocol == "v1.kernel.websocket.jupyter.org":
-            msg = {"header": None, "parent_header": None, "content": None}
-        else:
-            msg = self.session.deserialize(fed_msg_list)
-
-        if isinstance(stream, str):
-            stream = self.channels[stream]
-
-        channel = getattr(stream, "channel", None)
-        parts = fed_msg_list[1:]
-
-        self._on_error(channel, msg, parts)
-
-        if self._limit_rate(channel, msg, parts):
-            return
-
-        if self.subprotocol == "v1.kernel.websocket.jupyter.org":
-            self._on_zmq_reply(stream, parts)
-        else:
-            self._on_zmq_reply(stream, msg)
-
-    def get_part(self, field, value, msg_list):
-        """Get a part of a message."""
-        if value is None:
-            field2idx = {
-                "header": 0,
-                "parent_header": 1,
-                "content": 3,
-            }
-            value = self.session.unpack(msg_list[field2idx[field]])
-        return value
 
     def _reserialize_reply(self, msg_or_list, channel=None):
         """Reserialize a reply message using JSON.
@@ -477,64 +162,15 @@ class ZMQChannelsWebsocketConnection(BaseKernelWebsocketConnection):
         be sent back to the browser.
 
         """
-        if isinstance(msg_or_list, dict):
-            # already unpacked
-            msg = msg_or_list
-        else:
-            _, msg_list = self.session.feed_identities(msg_or_list)
-            msg = self.session.deserialize(msg_list)
-        if channel:
-            msg["channel"] = channel
-        if msg["buffers"]:
-            buf = serialize_binary_message(msg)
-            return buf
-        else:
-            return json.dumps(msg, default=json_default)
+        pass
 
     def _on_zmq_reply(self, stream, msg_list):
         """Handle a zmq reply."""
-        # Sometimes this gets triggered when the on_close method is scheduled in the
-        # eventloop but hasn't been called.
-        if stream.closed():
-            self.log.warning("zmq message arrived on closed channel")
-            self.disconnect()
-            return
-        channel = getattr(stream, "channel", None)
-        if self.subprotocol == "v1.kernel.websocket.jupyter.org":
-            bin_msg = serialize_msg_to_ws_v1(msg_list, channel)
-            self.write_message(bin_msg, binary=True)
-        else:
-            try:
-                msg = self._reserialize_reply(msg_list, channel=channel)
-            except Exception:
-                self.log.critical("Malformed message: %r" % msg_list, exc_info=True)
-            else:
-                try:
-                    self.write_message(msg, binary=isinstance(msg, bytes))
-                except WebSocketClosedError as e:
-                    self.log.warning(str(e))
+        pass
 
     def request_kernel_info(self):
         """send a request for kernel_info"""
-        try:
-            # check for previous request
-            future = self.kernel_manager._kernel_info_future
-        except AttributeError:
-            self.log.debug("Requesting kernel info from %s", self.kernel_id)
-            # Create a kernel_info channel to query the kernel protocol version.
-            # This channel will be closed after the kernel_info reply is received.
-            if self.kernel_info_channel is None:
-                self.kernel_info_channel = self.multi_kernel_manager.connect_shell(self.kernel_id)
-            assert self.kernel_info_channel is not None
-            self.kernel_info_channel.on_recv(self._handle_kernel_info_reply)
-            self.session.send(self.kernel_info_channel, "kernel_info_request")
-            # store the future on the kernel, so only one request is sent
-            self.kernel_manager._kernel_info_future = self._kernel_info_future
-        else:
-            if not future.done():
-                self.log.debug("Waiting for pending kernel_info request")
-            future.add_done_callback(lambda f: self._finish_kernel_info(f.result()))
-        return _ensure_future(self._kernel_info_future)
+        pass
 
     def _handle_kernel_info_reply(self, msg):
         """process the kernel_info_reply
@@ -549,144 +185,15 @@ class ZMQChannelsWebsocketConnection(BaseKernelWebsocketConnection):
         Set up protocol adaptation, if needed,
         and signal that connection can continue.
         """
-        protocol_version = info.get("protocol_version", client_protocol_version)
-        if protocol_version != client_protocol_version:
-            self.session.adapt_version = int(protocol_version.split(".")[0])
-            self.log.info(
-                f"Adapting from protocol version {protocol_version} (kernel {self.kernel_id}) to {client_protocol_version} (client)."
-            )
-        if not self._kernel_info_future.done():
-            self._kernel_info_future.set_result(info)
+        pass
 
     def write_stderr(self, error_message, parent_header):
         """Write a message to stderr."""
-        self.log.warning(error_message)
-        err_msg = self.session.msg(
-            "stream",
-            content={"text": error_message + "\n", "name": "stderr"},
-            parent=parent_header,
-        )
-        if self.subprotocol == "v1.kernel.websocket.jupyter.org":
-            bin_msg = serialize_msg_to_ws_v1(err_msg, "iopub", self.session.pack)
-            self.write_message(bin_msg, binary=True)
-        else:
-            err_msg["channel"] = "iopub"
-            self.write_message(json.dumps(err_msg, default=json_default))
+        pass
 
     def _limit_rate(self, channel, msg, msg_list):
         """Limit the message rate on a channel."""
-        if not (self.limit_rate and channel == "iopub"):
-            return False
-
-        msg["header"] = self.get_part("header", msg["header"], msg_list)
-
-        msg_type = msg["header"]["msg_type"]
-        if msg_type == "status":
-            msg["content"] = self.get_part("content", msg["content"], msg_list)
-            if msg["content"].get("execution_state") == "idle":
-                # reset rate limit counter on status=idle,
-                # to avoid 'Run All' hitting limits prematurely.
-                self._iopub_window_byte_queue = []
-                self._iopub_window_msg_count = 0
-                self._iopub_window_byte_count = 0
-                self._iopub_msgs_exceeded = False
-                self._iopub_data_exceeded = False
-
-        if msg_type not in {"status", "comm_open", "execute_input"}:
-            # Remove the counts queued for removal.
-            now = IOLoop.current().time()
-            while len(self._iopub_window_byte_queue) > 0:
-                queued = self._iopub_window_byte_queue[0]
-                if now >= queued[0]:
-                    self._iopub_window_byte_count -= queued[1]
-                    self._iopub_window_msg_count -= 1
-                    del self._iopub_window_byte_queue[0]
-                else:
-                    # This part of the queue hasn't be reached yet, so we can
-                    # abort the loop.
-                    break
-
-            # Increment the bytes and message count
-            self._iopub_window_msg_count += 1
-            byte_count = sum(len(x) for x in msg_list) if msg_type == "stream" else 0
-            self._iopub_window_byte_count += byte_count
-
-            # Queue a removal of the byte and message count for a time in the
-            # future, when we are no longer interested in it.
-            self._iopub_window_byte_queue.append((now + self.rate_limit_window, byte_count))
-
-            # Check the limits, set the limit flags, and reset the
-            # message and data counts.
-            msg_rate = float(self._iopub_window_msg_count) / self.rate_limit_window
-            data_rate = float(self._iopub_window_byte_count) / self.rate_limit_window
-
-            # Check the msg rate
-            if self.iopub_msg_rate_limit > 0 and msg_rate > self.iopub_msg_rate_limit:
-                if not self._iopub_msgs_exceeded:
-                    self._iopub_msgs_exceeded = True
-                    msg["parent_header"] = self.get_part(
-                        "parent_header", msg["parent_header"], msg_list
-                    )
-                    self.write_stderr(
-                        dedent(
-                            f"""\
-                    IOPub message rate exceeded.
-                    The Jupyter server will temporarily stop sending output
-                    to the client in order to avoid crashing it.
-                    To change this limit, set the config variable
-                    `--ServerApp.iopub_msg_rate_limit`.
-
-                    Current values:
-                    ServerApp.iopub_msg_rate_limit={self.iopub_msg_rate_limit} (msgs/sec)
-                    ServerApp.rate_limit_window={self.rate_limit_window} (secs)
-                    """
-                        ),
-                        msg["parent_header"],
-                    )
-            # resume once we've got some headroom below the limit
-            elif self._iopub_msgs_exceeded and msg_rate < (0.8 * self.iopub_msg_rate_limit):
-                self._iopub_msgs_exceeded = False
-                if not self._iopub_data_exceeded:
-                    self.log.warning("iopub messages resumed")
-
-            # Check the data rate
-            if self.iopub_data_rate_limit > 0 and data_rate > self.iopub_data_rate_limit:
-                if not self._iopub_data_exceeded:
-                    self._iopub_data_exceeded = True
-                    msg["parent_header"] = self.get_part(
-                        "parent_header", msg["parent_header"], msg_list
-                    )
-                    self.write_stderr(
-                        dedent(
-                            f"""\
-                    IOPub data rate exceeded.
-                    The Jupyter server will temporarily stop sending output
-                    to the client in order to avoid crashing it.
-                    To change this limit, set the config variable
-                    `--ServerApp.iopub_data_rate_limit`.
-
-                    Current values:
-                    ServerApp.iopub_data_rate_limit={self.iopub_data_rate_limit} (bytes/sec)
-                    ServerApp.rate_limit_window={self.rate_limit_window} (secs)
-                    """
-                        ),
-                        msg["parent_header"],
-                    )
-            # resume once we've got some headroom below the limit
-            elif self._iopub_data_exceeded and data_rate < (0.8 * self.iopub_data_rate_limit):
-                self._iopub_data_exceeded = False
-                if not self._iopub_msgs_exceeded:
-                    self.log.warning("iopub messages resumed")
-
-            # If either of the limit flags are set, do not send the message.
-            if self._iopub_msgs_exceeded or self._iopub_data_exceeded:
-                # we didn't send it, remove the current message from the calculus
-                self._iopub_window_msg_count -= 1
-                self._iopub_window_byte_count -= byte_count
-                self._iopub_window_byte_queue.pop(-1)
-                return True
-
-            return False
+        pass
 
     def _send_status_message(self, status):
         """Send a status message."""
@@ -702,18 +209,7 @@ class ZMQChannelsWebsocketConnection(BaseKernelWebsocketConnection):
 
     def _on_error(self, channel, msg, msg_list):
         """Handle an error message."""
-        if self.multi_kernel_manager.allow_tracebacks:
-            return
-
-        if channel == "iopub":
-            msg["header"] = self.get_part("header", msg["header"], msg_list)
-            if msg["header"]["msg_type"] == "error":
-                msg["content"] = self.get_part("content", msg["content"], msg_list)
-                msg["content"]["ename"] = "ExecutionError"
-                msg["content"]["evalue"] = "Execution error"
-                msg["content"]["traceback"] = [self.kernel_manager.traceback_replacement_message]
-                if self.subprotocol == "v1.kernel.websocket.jupyter.org":
-                    msg_list[3] = self.session.pack(msg["content"])
+        pass
 
 
 KernelWebsocketConnectionABC.register(ZMQChannelsWebsocketConnection)

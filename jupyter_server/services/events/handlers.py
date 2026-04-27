@@ -37,21 +37,12 @@ class SubscribeWebsocket(
         attempting to subscribe to events emitted by
         Jupyter Server's eventbus.
         """
-        user = self.current_user
-        # authorize the user.
-        authorized = await ensure_async(
-            self.authorizer.is_authorized(self, user, "execute", "events")
-        )
-        if not authorized:
-            raise web.HTTPError(403)
+        pass
 
     @ws_authenticated
     async def get(self, *args, **kwargs):
         """Get an event socket."""
-        await ensure_async(self.pre_get())
-        res = super().get(*args, **kwargs)
-        if res is not None:
-            await res
+        pass
 
     async def event_listener(
         self, logger: jupyter_events.logger.EventLogger, schema_id: str, data: dict[str, Any]
@@ -75,20 +66,7 @@ def validate_model(
 ) -> None:
     """Validates for required fields in the JSON request body and verifies that
     a registered schema/version exists"""
-    required_keys = {"schema_id", "version", "data"}
-    for key in required_keys:
-        if key not in data:
-            message = f"Missing `{key}` in the JSON request body."
-            raise Exception(message)
-    schema_id = cast("str", data.get("schema_id"))
-    # The case where a given schema_id isn't found,
-    # jupyter_events raises a useful error, so there's no need to
-    # handle that case here.
-    schema = registry.get(schema_id)
-    version = str(cast("str", data.get("version")))
-    if schema.version != version:
-        message = f"Unregistered version: {version!r}â‰ {schema.version!r} for `{schema_id}`"
-        raise Exception(message)
+    pass
 
 
 def get_timestamp(data: dict[str, Any]) -> Optional[datetime]:

@@ -68,7 +68,7 @@ class Authorizer(LoggingConfigurable):
         bool
             True if user authorized to make request; False, otherwise
         """
-        raise NotImplementedError
+        pass
 
 
 class AllowAllAuthorizer(Authorizer):
@@ -86,4 +86,4 @@ class AllowAllAuthorizer(Authorizer):
 
         All authenticated users are allowed to do anything in the Jupyter Server.
         """
-        return True
+        pass

@@ -41,26 +41,7 @@ def authorized(
     message : str or none
         a message for the unauthorized action.
     """
-
-    def wrapper(method):
-        @wraps(method)
-        async def inner(self, *args, **kwargs):
-            # default values for action, resource
-            pass
-
-        return inner
-
-    if callable(action):
-        method = action
-        action = None
-        # no-arguments `@authorized` decorator called
-        return cast("FuncT", wrapper(method))
-
-    return cast("FuncT", wrapper)
-
-
-def allow_unauthenticated(method: FuncT) -> FuncT:
-    """A decorator for tornado.web.RequestHandler methods
+    pass
     that allows any user to make the following request.
 
     Selectively disables the 'authentication' layer of REST API which
@@ -76,14 +57,7 @@ def allow_unauthenticated(method: FuncT) -> FuncT:
     method : bound callable
         the endpoint method to remove authentication from.
     """
-
-    @wraps(method)
-    def wrapper(self, *args, **kwargs):
-        return method(self, *args, **kwargs)
-
-    setattr(wrapper, "__allow_unauthenticated", True)
-
-    return cast("FuncT", wrapper)
+    pass
 
 
 def ws_authenticated(method: FuncT) -> FuncT:
@@ -100,15 +74,4 @@ def ws_authenticated(method: FuncT) -> FuncT:
     method : bound callable
         the endpoint method to add authentication for.
     """
-
-    @wraps(method)
-    def wrapper(self, *args, **kwargs):
-        user = self.current_user
-        if user is None:
-            self.log.warning("Couldn't authenticate WebSocket connection")
-            raise HTTPError(403)
-        return method(self, *args, **kwargs)
-
-    setattr(wrapper, "__allow_unauthenticated", False)
-
-    return cast("FuncT", wrapper)
+    pass

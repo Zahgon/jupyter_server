@@ -26,12 +26,12 @@ from jupyter_server.utils import ApiPath, to_api_path, to_os_path
 
 def replace_file(src, dst):
     """replace dst with src"""
-    os.replace(src, dst)
+    pass
 
 
 async def async_replace_file(src, dst):
     """replace dst with src asynchronously"""
-    await run_sync(os.replace, src, dst)
+    pass
 
 
 def copy2_safe(src, dst, log=None):
@@ -39,32 +39,7 @@ def copy2_safe(src, dst, log=None):
 
     like shutil.copy2, but log errors in copystat instead of raising
     """
-    is_writable = os.access(src, os.W_OK)
-
-    if not is_writable:
-        # attempt to refresh the attribute cache (used by remote file systems)
-        # rather than raising a permission error before any operation that could
-        # refresh the attribute cache is allowed to take place.
-        fd = os.open(src, os.O_RDONLY)
-        try:
-            os.fsync(fd)
-        finally:
-            os.close(fd)
-        # re-try
-        is_writable = os.access(src, os.W_OK)
-
-    # if src file is not writable, avoid creating a back-up
-    if not is_writable:
-        if log:
-            log.debug("Source file, %s, is not writable", src)
-        raise PermissionError(errno.EACCES, f"File is not writable: {src}")
-
-    shutil.copyfile(src, dst)
-    try:
-        shutil.copystat(src, dst)
-    except OSError:
-        if log:
-            log.debug("copystat on %s failed", dst, exc_info=True)
+    pass
 
 
 async def async_copy2_safe(src, dst, log=None):
@@ -72,31 +47,19 @@ async def async_copy2_safe(src, dst, log=None):
 
     like shutil.copy2, but log errors in copystat instead of raising
     """
-    if not os.access(src, os.W_OK):
-        if log:
-            log.debug("Source file, %s, is not writable", src)
-        raise PermissionError(errno.EACCES, f"File is not writable: {src}")
-
-    await run_sync(shutil.copyfile, src, dst)
-    try:
-        await run_sync(shutil.copystat, src, dst)
-    except OSError:
-        if log:
-            log.debug("copystat on %s failed", dst, exc_info=True)
+    pass
 
 
 def path_to_intermediate(path):
     """Name of the intermediate file used in atomic writes.
 
     The .~ prefix will make Dropbox ignore the temporary file."""
-    dirname, basename = os.path.split(path)
-    return os.path.join(dirname, ".~" + basename)
+    pass
 
 
 def path_to_invalid(path):
     """Name of invalid file after a failed atomic write and subsequent read."""
-    dirname, basename = os.path.split(path)
-    return os.path.join(dirname, basename + ".invalid")
+    pass
 
 
 @contextmanager
@@ -120,55 +83,7 @@ def atomic_writing(path, text=True, encoding="utf-8", log=None, **kwargs):
     **kwargs
         Passed to :func:`io.open`.
     """
-    # realpath doesn't work on Windows: https://bugs.python.org/issue9949
-    # Luckily, we only need to resolve the file itself being a symlink, not
-    # any of its directories, so this will suffice:
-    if os.path.islink(path):
-        path = os.path.join(os.path.dirname(path), os.readlink(path))
-
-    # Fall back to direct write for existing file in a non-writable dir
-    dirpath = os.path.dirname(path) or os.getcwd()
-    if os.path.isfile(path) and not os.access(dirpath, os.W_OK) and os.access(path, os.W_OK):
-        mode = "w" if text else "wb"
-        # direct open on the target file
-        if text:
-            fileobj = open(path, mode, encoding=encoding, **kwargs)  # noqa: SIM115
-        else:
-            fileobj = open(path, mode, **kwargs)  # noqa: SIM115
-        try:
-            yield fileobj
-        finally:
-            fileobj.close()
-        return
-
-    tmp_path = path_to_intermediate(path)
-
-    if os.path.isfile(path):
-        copy2_safe(path, tmp_path, log=log)
-
-    if text:
-        # Make sure that text files have Unix linefeeds by default
-        kwargs.setdefault("newline", "\n")
-        fileobj = open(path, "w", encoding=encoding, **kwargs)  # noqa: SIM115
-    else:
-        fileobj = open(path, "wb", **kwargs)  # noqa: SIM115
-
-    try:
-        yield fileobj
-    except BaseException:
-        # Failed! Move the backup file back to the real path to avoid corruption
-        fileobj.close()
-        replace_file(tmp_path, path)
-        raise
-
-    # Flush to disk
-    fileobj.flush()
-    os.fsync(fileobj.fileno())
-    fileobj.close()
-
-    # Written successfully, now remove the backup copy
-    if os.path.isfile(tmp_path):
-        os.remove(tmp_path)
+    pass
 
 
 @contextmanager
@@ -188,26 +103,7 @@ def _simple_writing(path, text=True, encoding="utf-8", log=None, **kwargs):
     **kwargs
         Passed to :func:`io.open`.
     """
-    # realpath doesn't work on Windows: https://bugs.python.org/issue9949
-    # Luckily, we only need to resolve the file itself being a symlink, not
-    # any of its directories, so this will suffice:
-    if os.path.islink(path):
-        path = os.path.join(os.path.dirname(path), os.readlink(path))
-
-    if text:
-        # Make sure that text files have Unix linefeeds by default
-        kwargs.setdefault("newline", "\n")
-        fileobj = open(path, "w", encoding=encoding, **kwargs)  # noqa: SIM115
-    else:
-        fileobj = open(path, "wb", **kwargs)  # noqa: SIM115
-
-    try:
-        yield fileobj
-    except BaseException:
-        fileobj.close()
-        raise
-
-    fileobj.close()
+    pass
 
 
 class FileManagerMixin(LoggingConfigurable, Configurable):
@@ -253,38 +149,19 @@ class FileManagerMixin(LoggingConfigurable, Configurable):
         """wrapper around atomic_writing that turns permission errors to 403.
         Depending on flag 'use_atomic_writing', the wrapper perform an actual atomic writing or
         simply writes the file (whatever an old exists or not)"""
-        with self.perm_to_403(os_path):
-            kwargs["log"] = self.log
-            if self.use_atomic_writing:
-                with atomic_writing(os_path, *args, **kwargs) as f:
-                    yield f
-            else:
-                with _simple_writing(os_path, *args, **kwargs) as f:
-                    yield f
+        pass
 
     @contextmanager
     def perm_to_403(self, os_path=""):
         """context manager for turning permission errors into 403."""
-        try:
-            yield
-        except OSError as e:
-            if e.errno in {errno.EPERM, errno.EACCES}:
-                # make 403 error message without root prefix
-                # this may not work perfectly on unicode paths on Python 2,
-                # but nobody should be doing that anyway.
-                if not os_path:
-                    os_path = e.filename or "unknown file"
-                path = to_api_path(os_path, root=self.root_dir)  # type:ignore[attr-defined]
-                raise HTTPError(403, "Permission denied: %s" % path) from e
-            else:
-                raise
+        pass
 
     def _copy(self, src, dest):
         """copy src to dest
 
         like shutil.copy2, but log errors in copystat
         """
-        copy2_safe(src, dest, log=self.log)
+        pass
 
     def _get_os_path(self, path):
         """Given an API path, return its file system path.
@@ -303,73 +180,17 @@ class FileManagerMixin(LoggingConfigurable, Configurable):
         ------
         404: if path is outside root
         """
-        # This statement can cause excessive logging, uncomment if necessary when troubleshooting.
-        # self.log.debug("Reading path from disk: %s", path)
-        root = os.path.abspath(self.root_dir)  # type:ignore[attr-defined]
-        # to_os_path is not safe if path starts with a drive, since os.path.join discards first part
-        if os.path.splitdrive(path)[0]:
-            raise HTTPError(404, "%s is not a relative API path" % path)
-        os_path = to_os_path(ApiPath(path), root)
-        # validate os path
-        # e.g. "foo\0" raises ValueError: embedded null byte
-        try:
-            os.lstat(os_path)
-        except OSError:
-            # OSError could be FileNotFound, PermissionError, etc.
-            # those should raise (or not) elsewhere
-            pass
-        except ValueError:
-            raise HTTPError(404, f"{path} is not a valid path") from None
-
-        if not (os.path.abspath(os_path) + os.path.sep).startswith(root):
-            raise HTTPError(404, "%s is outside root contents directory" % path)
-        return os_path
+        pass
 
     def _read_notebook(
         self, os_path, as_version=4, capture_validation_error=None, raw: bool = False
     ):
         """Read a notebook from an os path."""
-        answer = self._read_file(os_path, "text", raw=raw)
-
-        try:
-            nb = nbformat.reads(
-                answer[0],
-                as_version=as_version,
-                capture_validation_error=capture_validation_error,
-            )
-
-            return (nb, answer[2]) if raw else nb  # type:ignore[misc]
-        except Exception as e:
-            e_orig = e
-
-        # If use_atomic_writing is enabled, we'll guess that it was also
-        # enabled when this notebook was written and look for a valid
-        # atomic intermediate.
-        tmp_path = path_to_intermediate(os_path)
-
-        if not self.use_atomic_writing or not os.path.exists(tmp_path):
-            raise HTTPError(
-                400,
-                f"Unreadable Notebook: {os_path} {e_orig!r}",
-            )
-
-        # Move the bad file aside, restore the intermediate, and try again.
-        invalid_file = path_to_invalid(os_path)
-        replace_file(os_path, invalid_file)
-        replace_file(tmp_path, os_path)
-        return self._read_notebook(
-            os_path, as_version, capture_validation_error=capture_validation_error, raw=raw
-        )
+        pass
 
     def _save_notebook(self, os_path, nb, capture_validation_error=None):
         """Save a notebook to an os_path."""
-        with self.atomic_writing(os_path, encoding="utf-8") as f:
-            nbformat.write(
-                nb,
-                f,
-                version=nbformat.NO_CONVERT,
-                capture_validation_error=capture_validation_error,
-            )
+        pass
 
     def _get_hash(self, byte_content: bytes) -> dict[str, str]:
         """Compute the hash hexdigest for the provided bytes.
@@ -385,10 +206,7 @@ class FileManagerMixin(LoggingConfigurable, Configurable):
         -------
         A dictionary to be appended to a model {"hash": str, "hash_algorithm": str}.
         """
-        algorithm = self.hash_algorithm
-        h = hashlib.new(algorithm)
-        h.update(byte_content)
-        return {"hash": h.hexdigest(), "hash_algorithm": algorithm}
+        pass
 
     def _read_file(
         self, os_path: str, format: str | None, raw: bool = False
@@ -412,62 +230,11 @@ class FileManagerMixin(LoggingConfigurable, Configurable):
         (content, format, byte_content) It returns the content in the given format
         as well as the raw byte content.
         """
-        if not os.path.isfile(os_path):
-            raise HTTPError(400, "Cannot read non-file %s" % os_path)
-
-        with self.open(os_path, "rb") as f:
-            bcontent = f.read()
-
-        if format == "byte":
-            # Not for http response but internal use
-            return (bcontent, "byte", bcontent) if raw else (bcontent, "byte")
-
-        if format is None or format == "text":
-            # Try to interpret as unicode if format is unknown or if unicode
-            # was explicitly requested.
-            try:
-                return (
-                    (bcontent.decode("utf8"), "text", bcontent)
-                    if raw
-                    else (
-                        bcontent.decode("utf8"),
-                        "text",
-                    )
-                )
-            except UnicodeError as e:
-                if format == "text":
-                    raise HTTPError(
-                        400,
-                        "%s is not UTF-8 encoded" % os_path,
-                        reason="bad format",
-                    ) from e
-        return (
-            (encodebytes(bcontent).decode("ascii"), "base64", bcontent)
-            if raw
-            else (
-                encodebytes(bcontent).decode("ascii"),
-                "base64",
-            )
-        )
+        pass
 
     def _save_file(self, os_path, content, format):
         """Save content of a generic file."""
-        if format not in {"text", "base64"}:
-            raise HTTPError(
-                400,
-                "Must specify format of file contents as 'text' or 'base64'",
-            )
-        try:
-            if format == "text":
-                bcontent = content.encode("utf8")
-            else:
-                b64_bytes = content.encode("ascii")
-                bcontent = decodebytes(b64_bytes)
-        except Exception as e:
-            raise HTTPError(400, f"Encoding error saving {os_path}: {e}") from e
-
-        with self.atomic_writing(os_path, text=False) as f:
-            f.write(bcontent)
+        pass
 
 
 class AsyncFileManagerMixin(FileManagerMixin):
@@ -480,60 +247,17 @@ class AsyncFileManagerMixin(FileManagerMixin):
 
         like shutil.copy2, but log errors in copystat
         """
-        await async_copy2_safe(src, dest, log=self.log)
+        pass
 
     async def _read_notebook(
         self, os_path, as_version=4, capture_validation_error=None, raw: bool = False
     ):
         """Read a notebook from an os path."""
-        answer = await self._read_file(os_path, "text", raw)
-
-        try:
-            nb = await run_sync(
-                partial(
-                    nbformat.reads,
-                    as_version=as_version,
-                    capture_validation_error=capture_validation_error,
-                ),
-                answer[0],
-            )
-            return (nb, answer[2]) if raw else nb  # type:ignore[misc]
-        except Exception as e:
-            e_orig = e
-
-        # If use_atomic_writing is enabled, we'll guess that it was also
-        # enabled when this notebook was written and look for a valid
-        # atomic intermediate.
-        tmp_path = path_to_intermediate(os_path)
-
-        if not self.use_atomic_writing or not os.path.exists(tmp_path):
-            raise HTTPError(
-                400,
-                f"Unreadable Notebook: {os_path} {e_orig!r}",
-            )
-
-        # Move the bad file aside, restore the intermediate, and try again.
-        invalid_file = path_to_invalid(os_path)
-        await async_replace_file(os_path, invalid_file)
-        await async_replace_file(tmp_path, os_path)
-        answer = await self._read_notebook(
-            os_path, as_version, capture_validation_error=capture_validation_error, raw=raw
-        )
-
-        return answer
+        pass
 
     async def _save_notebook(self, os_path, nb, capture_validation_error=None):
         """Save a notebook to an os_path."""
-        with self.atomic_writing(os_path, encoding="utf-8") as f:
-            await run_sync(
-                partial(
-                    nbformat.write,
-                    version=nbformat.NO_CONVERT,
-                    capture_validation_error=capture_validation_error,
-                ),
-                nb,
-                f,
-            )
+        pass
 
     async def _read_file(  # type: ignore[override]
         self, os_path: str, format: str | None, raw: bool = False
@@ -557,56 +281,8 @@ class AsyncFileManagerMixin(FileManagerMixin):
         (content, format, byte_content) It returns the content in the given format
         as well as the raw byte content.
         """
-        if not os.path.isfile(os_path):
-            raise HTTPError(400, "Cannot read non-file %s" % os_path)
-
-        with self.open(os_path, "rb") as f:
-            bcontent = await run_sync(f.read)
-
-        if format == "byte":
-            # Not for http response but internal use
-            return (bcontent, "byte", bcontent) if raw else (bcontent, "byte")
-
-        if format is None or format == "text":
-            # Try to interpret as unicode if format is unknown or if unicode
-            # was explicitly requested.
-            try:
-                return (
-                    (bcontent.decode("utf8"), "text", bcontent)
-                    if raw
-                    else (
-                        bcontent.decode("utf8"),
-                        "text",
-                    )
-                )
-            except UnicodeError as e:
-                if format == "text":
-                    raise HTTPError(
-                        400,
-                        "%s is not UTF-8 encoded" % os_path,
-                        reason="bad format",
-                    ) from e
-        return (
-            (encodebytes(bcontent).decode("ascii"), "base64", bcontent)
-            if raw
-            else (encodebytes(bcontent).decode("ascii"), "base64")
-        )
+        pass
 
     async def _save_file(self, os_path, content, format):
         """Save content of a generic file."""
-        if format not in {"text", "base64"}:
-            raise HTTPError(
-                400,
-                "Must specify format of file contents as 'text' or 'base64'",
-            )
-        try:
-            if format == "text":
-                bcontent = content.encode("utf8")
-            else:
-                b64_bytes = content.encode("ascii")
-                bcontent = decodebytes(b64_bytes)
-        except Exception as e:
-            raise HTTPError(400, f"Encoding error saving {os_path}: {e}") from e
-
-        with self.atomic_writing(os_path, text=False) as f:
-            await run_sync(f.write, bcontent)
+        pass

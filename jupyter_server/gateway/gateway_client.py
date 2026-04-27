@@ -83,7 +83,7 @@ class NoOpTokenRenewer(GatewayTokenRenewerBase):
         **kwargs: ty.Any,
     ) -> str:
         """This implementation simply returns the current authorization token."""
-        return auth_token
+        pass
 
 
 class GatewayClient(SingletonConfigurable):
@@ -102,7 +102,7 @@ class GatewayClient(SingletonConfigurable):
 
     def emit(self, data):
         """Emit event using the core event schema from Jupyter Server's Gateway Client."""
-        self.event_logger.emit(schema_id=self.event_schema_id, data=data)
+        pass
 
     url = Unicode(
         default_value=None,
@@ -487,157 +487,26 @@ such that request_timeout >= KERNEL_LAUNCH_TIMEOUT + launch_timeout_pad.
         """Initialize arguments used on every request.  Since these are primarily static values,
         we'll perform this operation once.
         """
-        # Ensure that request timeout and KERNEL_LAUNCH_TIMEOUT are in sync, taking the
-        #  greater value of the two and taking into account the following relation:
-        #  request_timeout = KERNEL_LAUNCH_TIME + padding
-        minimum_request_timeout = (
-            float(GatewayClient.KERNEL_LAUNCH_TIMEOUT) + self.launch_timeout_pad
-        )
-        if self.request_timeout < minimum_request_timeout:
-            self.request_timeout = minimum_request_timeout
-        elif self.request_timeout > minimum_request_timeout:
-            GatewayClient.KERNEL_LAUNCH_TIMEOUT = int(
-                self.request_timeout - self.launch_timeout_pad
-            )
-        # Ensure any adjustments are reflected in env.
-        os.environ["KERNEL_LAUNCH_TIMEOUT"] = str(GatewayClient.KERNEL_LAUNCH_TIMEOUT)
-
-        if self.headers:
-            self._connection_args["headers"] = json.loads(self.headers)
-            if self.auth_header_key not in self._connection_args["headers"]:
-                self._connection_args["headers"].update(
-                    {f"{self.auth_header_key}": f"{self.auth_scheme} {self.auth_token}"}
-                )
-        self._connection_args["connect_timeout"] = self.connect_timeout
-        self._connection_args["request_timeout"] = self.request_timeout
-        self._connection_args["validate_cert"] = self.validate_cert
-        if self.client_cert:
-            self._connection_args["client_cert"] = self.client_cert
-            self._connection_args["client_key"] = self.client_key
-            if self.ca_certs:
-                self._connection_args["ca_certs"] = self.ca_certs
-        if self.http_user:
-            self._connection_args["auth_username"] = self.http_user
-        if self.http_pwd:
-            self._connection_args["auth_password"] = self.http_pwd
+        pass
 
     def load_connection_args(self, **kwargs):
         """Merges the static args relative to the connection, with the given keyword arguments.  If static
         args have yet to be initialized, we'll do that here.
 
         """
-        if len(self._connection_args) == 0:
-            self.init_connection_args()
-
-        # Give token renewal a shot at renewing the token
-        prev_auth_token = self.auth_token
-        if self.auth_token is not None:
-            try:
-                self.auth_token = self.gateway_token_renewer.get_token(
-                    self.auth_header_key, self.auth_scheme, self.auth_token
-                )
-            except Exception as ex:
-                self.log.error(
-                    f"An exception occurred attempting to renew the "
-                    f"Gateway authorization token using an instance of class "
-                    f"'{self.gateway_token_renewer_class}'.  The request will "
-                    f"proceed using the current token value.  Exception was: {ex}"
-                )
-                self.auth_token = prev_auth_token
-
-        for arg, value in self._connection_args.items():
-            if arg == "headers":
-                given_value = kwargs.setdefault(arg, {})
-                if isinstance(given_value, dict):
-                    given_value.update(value)
-                    # Ensure the auth header is current
-                    given_value.update(
-                        {f"{self.auth_header_key}": f"{self.auth_scheme} {self.auth_token}"}
-                    )
-            else:
-                kwargs[arg] = value
-
-        if self.accept_cookies:
-            self._update_cookie_header(kwargs)
-
-        return kwargs
+        pass
 
     def update_cookies(self, headers: HTTPHeaders) -> None:
         """Update cookies from response headers"""
-
-        if not self.accept_cookies:
-            return
-
-        # Get individual Set-Cookie headers in list form.  This handles multiple cookies
-        # that are otherwise comma-separated in the header and will break the parsing logic
-        # if only headers.get() is used.
-        cookie_headers = headers.get_list("Set-Cookie")
-        if not cookie_headers:
-            return
-
-        store_time = datetime.now(tz=timezone.utc)
-        for header in cookie_headers:
-            cookie = SimpleCookie()
-            try:
-                cookie.load(header)
-            except Exception as e:
-                self.log.warning("Failed to parse cookie header %s: %s", header, e)
-                continue
-
-            if not cookie:
-                self.log.warning("No cookies found in header: %s", header)
-                continue
-            name, morsel = next(iter(cookie.items()))
-
-            # Convert "expires" arg into "max-age" to facilitate expiration management.
-            # As "max-age" has precedence, ignore "expires" when "max-age" exists.
-            if morsel.get("expires") and not morsel.get("max-age"):
-                expire_time = parsedate_to_datetime(morsel["expires"])
-                expire_timedelta = expire_time - store_time
-                morsel["max-age"] = str(expire_timedelta.total_seconds())
-
-            self._cookies[name] = (morsel, store_time)
+        pass
 
     def _clear_expired_cookies(self) -> None:
         """Clear expired cookies."""
-        check_time = datetime.now(tz=timezone.utc)
-        expired_keys = []
-
-        for key, (morsel, store_time) in self._cookies.items():
-            cookie_max_age = morsel.get("max-age")
-            if not cookie_max_age:
-                continue
-            expired_timedelta = check_time - store_time
-            if expired_timedelta.total_seconds() > float(cookie_max_age):
-                expired_keys.append(key)
-
-        for key in expired_keys:
-            self._cookies.pop(key)
+        pass
 
     def _update_cookie_header(self, connection_args: dict[str, ty.Any]) -> None:
         """Update a cookie header."""
-        self._clear_expired_cookies()
-
-        gateway_cookie_values = "; ".join(
-            f"{name}={morsel.coded_value}" for name, (morsel, _time) in self._cookies.items()
-        )
-        if gateway_cookie_values:
-            headers = connection_args.get("headers", {})
-
-            # As headers are case-insensitive, we get existing name of cookie header,
-            #  or use "Cookie" by default.
-            cookie_header_name = next(
-                (header_key for header_key in headers if header_key.lower() == "cookie"),
-                "Cookie",
-            )
-            existing_cookie = headers.get(cookie_header_name)
-
-            # merge gateway-managed cookies with cookies already in arguments
-            if existing_cookie:
-                gateway_cookie_values = existing_cookie + "; " + gateway_cookie_values
-            headers[cookie_header_name] = gateway_cookie_values
-
-            connection_args["headers"] = headers
+        pass
 
 
 class RetryableHTTPClient:
@@ -666,114 +535,20 @@ class RetryableHTTPClient:
         Retryable AsyncHTTPClient.fetch() method.  When the request fails, this method will
         recurse up to max_retries times if the condition deserves a retry.
         """
-        self.retry_count = 0
-        return await self._fetch(endpoint, **kwargs)
+        pass
 
     async def _fetch(self, endpoint: str, **kwargs: ty.Any) -> HTTPResponse:
         """
         Performs the fetch against the contained AsyncHTTPClient instance and determines
         if retry is necessary on any exceptions.  If so, retry is performed recursively.
         """
-        try:
-            response: HTTPResponse = await self.client.fetch(endpoint, **kwargs)
-        except Exception as e:
-            is_retryable: bool = await self._is_retryable(kwargs["method"], e)
-            if not is_retryable:
-                raise e
-            logging.getLogger("ServerApp").info(
-                f"Attempting retry ({self.retry_count}) against "
-                f"endpoint '{endpoint}'.  Retried error: '{e!r}'"
-            )
-            response = await self._fetch(endpoint, **kwargs)
-        return response
+        pass
 
     async def _is_retryable(self, method: str, exception: Exception) -> bool:
         """Determines if the given exception is retryable based on object's configuration."""
-
-        if method not in self.retried_methods:
-            return False
-        if self.retry_count == self.max_retries:
-            return False
-
-        # Determine if error is retryable...
-        if isinstance(exception, HTTPClientError):
-            hce: HTTPClientError = exception
-            if hce.code not in self.retried_errors:
-                return False
-        elif not any(isinstance(exception, error) for error in self.retried_exceptions):
-            return False
-
-        # Is retryable, wait for backoff, then increment count
-        await asyncio.sleep(self.backoff_factor * (2**self.retry_count))
-        self.retry_count += 1
-        return True
+        pass
 
 
 async def gateway_request(endpoint: str, **kwargs: ty.Any) -> HTTPResponse:
     """Make an async request to kernel gateway endpoint, returns a response"""
-    gateway_client = GatewayClient.instance()
-    kwargs = gateway_client.load_connection_args(**kwargs)
-    rhc = RetryableHTTPClient()
-    try:
-        response = await rhc.fetch(endpoint, **kwargs)
-        gateway_client.emit(
-            data={STATUS_KEY: SUCCESS_STATUS, STATUS_CODE_KEY: 200, MESSAGE_KEY: "success"}
-        )
-    # Trap a set of common exceptions so that we can inform the user that their Gateway url is incorrect
-    # or the server is not running.
-    # NOTE: We do this here since this handler is called during the server's startup and subsequent refreshes
-    # of the tree view.
-    except HTTPClientError as e:
-        gateway_client.emit(
-            data={STATUS_KEY: ERROR_STATUS, STATUS_CODE_KEY: e.code, MESSAGE_KEY: str(e.message)}
-        )
-        error_reason = (
-            f"Exception while attempting to connect to Gateway server url '{gateway_client.url}'"
-        )
-        error_message = e.message
-        if e.response:
-            try:
-                error_payload = json.loads(e.response.body)
-                error_reason = error_payload.get("reason") or error_reason
-                error_message = error_payload.get("message") or error_message
-            except json.decoder.JSONDecodeError:
-                error_reason = e.response.body.decode()
-
-        raise web.HTTPError(
-            e.code,
-            f"Error from Gateway: [{error_message}] {error_reason}. "
-            "Ensure gateway url is valid and the Gateway instance is running.",
-        ) from e
-    except ConnectionError as e:
-        gateway_client.emit(
-            data={STATUS_KEY: ERROR_STATUS, STATUS_CODE_KEY: 503, MESSAGE_KEY: str(e)}
-        )
-        raise web.HTTPError(
-            503,
-            f"ConnectionError was received from Gateway server url '{gateway_client.url}'.  "
-            "Check to be sure the Gateway instance is running.",
-        ) from e
-    except gaierror as e:
-        gateway_client.emit(
-            data={STATUS_KEY: ERROR_STATUS, STATUS_CODE_KEY: 404, MESSAGE_KEY: str(e)}
-        )
-        raise web.HTTPError(
-            404,
-            f"The Gateway server specified in the gateway_url '{gateway_client.url}' doesn't "
-            f"appear to be valid.  Ensure gateway url is valid and the Gateway instance is running.",
-        ) from e
-    except Exception as e:
-        gateway_client.emit(
-            data={STATUS_KEY: ERROR_STATUS, STATUS_CODE_KEY: 505, MESSAGE_KEY: str(e)}
-        )
-        logging.getLogger("ServerApp").error(
-            "Exception while trying to launch kernel via Gateway URL %s: %s",
-            gateway_client.url,
-            e,
-        )
-        raise e
-
-    if gateway_client.accept_cookies:
-        gateway_client.update_cookies(response.headers)
-
-    return response
+    pass

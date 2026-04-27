@@ -48,39 +48,22 @@ def url_path_join(*pieces: str) -> str:
     Use to prevent double slash when joining subpath. This will leave the
     initial and final / in place
     """
-    initial = pieces[0].startswith("/")
-    final = pieces[-1].endswith("/")
-    stripped = [s.strip("/") for s in pieces]
-    result = "/".join(s for s in stripped if s)
-    if initial:
-        result = "/" + result
-    if final:
-        result = result + "/"
-    if result == "//":
-        result = "/"
-    return result
+    pass
 
 
 def url_is_absolute(url: str) -> bool:
     """Determine whether a given URL is absolute"""
-    return urlparse(url).path.startswith("/")
+    pass
 
 
 def path2url(path: str) -> str:
     """Convert a local file path to a URL"""
-    pieces = [quote(p) for p in path.split(os.sep)]
-    # preserve trailing /
-    if pieces[-1] == "":
-        pieces[-1] = "/"
-    url = url_path_join(*pieces)
-    return url
+    pass
 
 
 def url2path(url: str) -> str:
     """Convert a URL to a local file path"""
-    pieces = [unquote(p) for p in url.split("/")]
-    path = os.path.join(*pieces)
-    return path
+    pass
 
 
 def url_escape(path: str) -> str:
@@ -88,8 +71,7 @@ def url_escape(path: str) -> str:
 
     Turns '/foo bar/' into '/foo%20bar/'
     """
-    parts = path.split("/")
-    return "/".join([quote(p) for p in parts])
+    pass
 
 
 def url_unescape(path: str) -> str:
@@ -97,7 +79,7 @@ def url_unescape(path: str) -> str:
 
     Turns '/foo%20bar/' into '/foo bar/'
     """
-    return "/".join([unquote(p) for p in path.split("/")])
+    pass
 
 
 def samefile_simple(path: str, other_path: str) -> bool:
@@ -122,9 +104,7 @@ def samefile_simple(path: str, other_path: str) -> bool:
     -------
     same:   Boolean that is True if both path and other path are the same
     """
-    path_stat = os.stat(path)
-    other_path_stat = os.stat(other_path)
-    return path.lower() == other_path.lower() and path_stat == other_path_stat
+    pass
 
 
 def to_os_path(path: ApiPath, root: str = "") -> str:
@@ -133,10 +113,7 @@ def to_os_path(path: ApiPath, root: str = "") -> str:
     If given, root will be prepended to the path.
     root must be a filesystem path already.
     """
-    parts = str(path).strip("/").split("/")
-    parts = [p for p in parts if p != ""]  #  remove duplicate splits
-    path_ = os.path.join(root, *parts)
-    return os.path.normpath(path_)
+    pass
 
 
 def to_api_path(os_path: str, root: str = "") -> ApiPath:
@@ -145,11 +122,7 @@ def to_api_path(os_path: str, root: str = "") -> ApiPath:
     If given, root will be removed from the path.
     root must be a filesystem path already.
     """
-    os_path = os_path.removeprefix(root)
-    parts = os_path.strip(os.path.sep).split(os.path.sep)
-    parts = [p for p in parts if p != ""]  # remove duplicate splits
-    path = "/".join(parts)
-    return ApiPath(path)
+    pass
 
 
 def check_version(v: str, check: str) -> bool:
@@ -159,10 +132,7 @@ def check_version(v: str, check: str) -> bool:
     it is assumed that the dependency is satisfied.
     Users on dev branches are responsible for keeping their own packages up to date.
     """
-    try:
-        return bool(Version(v) >= Version(check))
-    except TypeError:
-        return True
+    pass
 
 
 # Copy of IPython.utils.process.check_pid:
@@ -185,43 +155,27 @@ else:
 
 async def run_sync_in_loop(maybe_async):
     """**DEPRECATED**: Use ``ensure_async`` from jupyter_core instead."""
-    warnings.warn(
-        "run_sync_in_loop is deprecated since Jupyter Server 2.0, use 'ensure_async' from jupyter_core instead",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return ensure_async(maybe_async)
+    pass
 
 
 def urlencode_unix_socket_path(socket_path: str) -> str:
     """Encodes a UNIX socket path string from a socket path for the `http+unix` URI form."""
-    return socket_path.replace("/", "%2F")
+    pass
 
 
 def urldecode_unix_socket_path(socket_path: str) -> str:
     """Decodes a UNIX sock path string from an encoded sock path for the `http+unix` URI form."""
-    return socket_path.replace("%2F", "/")
+    pass
 
 
 def urlencode_unix_socket(socket_path: str) -> str:
     """Encodes a UNIX socket URL from a socket path for the `http+unix` URI form."""
-    return "http+unix://%s" % urlencode_unix_socket_path(socket_path)
+    pass
 
 
 def unix_socket_in_use(socket_path: str) -> bool:
     """Checks whether a UNIX socket path on disk is in use by attempting to connect to it."""
-    if not os.path.exists(socket_path):
-        return False
-
-    try:
-        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        sock.connect(socket_path)
-    except OSError:
-        return False
-    else:
-        return True
-    finally:
-        sock.close()
+    pass
 
 
 @contextmanager
@@ -236,46 +190,7 @@ def _request_for_tornado_client(
     configure the AsyncHTTPClient to resolve the URL
     and connect to the proper socket.
     """
-    parts = urlsplit(urlstring)
-    if parts.scheme in ["http", "https"]:
-        pass
-    elif parts.scheme == "http+unix":
-        # If unix socket, mimic HTTP.
-        parts = SplitResult(
-            scheme="http",
-            netloc=parts.netloc,
-            path=parts.path,
-            query=parts.query,
-            fragment=parts.fragment,
-        )
-
-        class UnixSocketResolver(Resolver):
-            """A resolver that routes HTTP requests to unix sockets
-            in tornado HTTP clients.
-            Due to constraints in Tornados' API, the scheme of the
-            must be `http` (not `http+unix`). Applications should replace
-            the scheme in URLS before making a request to the HTTP client.
-            """
-
-            def initialize(self, resolver):
-                self.resolver = resolver
-
-            def close(self):
-                self.resolver.close()
-
-            async def resolve(self, host, port, *args, **kwargs):
-                pass
-
-        resolver = UnixSocketResolver(resolver=Resolver())
-        AsyncHTTPClient.configure(None, resolver=resolver)
-    else:
-        msg = "Unknown URL scheme."
-        raise Exception(msg)
-
-    # Yield the request for the given client.
-    url = urlunsplit(parts)
-    request = HTTPRequest(url, method=method, body=body, headers=headers, validate_cert=False)
-    yield request
+    pass
 
 
 def fetch(
@@ -285,11 +200,7 @@ def fetch(
     Send a HTTP, HTTPS, or HTTP+UNIX request
     to a Tornado Web Server. Returns a tornado HTTPResponse.
     """
-    with _request_for_tornado_client(
-        urlstring, method=method, body=body, headers=headers
-    ) as request:
-        response = HTTPClient(AsyncHTTPClient).fetch(request)
-    return response
+    pass
 
 
 async def async_fetch(
@@ -299,11 +210,7 @@ async def async_fetch(
     Send an asynchronous HTTP, HTTPS, or HTTP+UNIX request
     to a Tornado Web Server. Returns a tornado HTTPResponse.
     """
-    with _request_for_tornado_client(
-        urlstring, method=method, body=body, headers=headers
-    ) as request:
-        response = await AsyncHTTPClient(io_loop).fetch(request)
-    return response
+    pass
 
 
 def is_namespace_package(namespace: str) -> bool | None:
@@ -314,16 +221,7 @@ def is_namespace_package(namespace: str) -> bool | None:
     Returns `None` if module is not importable.
 
     """
-    # NOTE: using submodule_search_locations because the loader can be None
-    try:
-        spec = importlib.util.find_spec(namespace)
-    except ValueError:  # spec is not set - see https://docs.python.org/3/library/importlib.html#importlib.util.find_spec
-        return None
-
-    if not spec:
-        # e.g. module not installed
-        return None
-    return bool(spec.origin is None and spec.submodule_search_locations)
+    pass
 
 
 def filefind(filename: str, path_dirs: Sequence[str]) -> str:
@@ -352,29 +250,7 @@ def filefind(filename: str, path_dirs: Sequence[str]) -> str:
     -------
     Raises :exc:`OSError` or returns absolute path to file.
     """
-    file_path = Path(filename)
-
-    # If the input is an absolute path, reject it
-    if file_path.is_absolute():
-        msg = f"{filename} is absolute, filefind only accepts relative paths."
-        raise OSError(msg)
-
-    for path_str in path_dirs:
-        path = Path(path_str).absolute()
-        test_path = path / file_path
-        # os.path.abspath resolves '..', but Path.absolute() doesn't
-        # Path.resolve() does, but traverses symlinks, which we don't want
-        test_path = Path(os.path.abspath(test_path))
-        if not test_path.is_relative_to(path):
-            # points outside root, e.g. via `filename='../foo'`
-            continue
-        # make sure we don't call is_file before we know it's a file within a prefix
-        # GHSA-hrw6-wg82-cm62 - can leak password hash on windows.
-        if test_path.is_file():
-            return os.path.abspath(test_path)
-
-    msg = f"File {filename!r} does not exist in any of the search paths: {path_dirs!r}"
-    raise OSError(msg)
+    pass
 
 
 def import_item(name: str) -> Any:
@@ -390,20 +266,7 @@ def import_item(name: str) -> Any:
     mod : module object
        The module that was imported.
     """
-
-    parts = name.rsplit(".", 1)
-    if len(parts) == 2:
-        # called with 'foo.bar....'
-        package, obj = parts
-        module = __import__(package, fromlist=[obj])
-        try:
-            pak = getattr(module, obj)
-        except AttributeError as e:
-            raise ImportError("No module named %s" % obj) from e
-        return pak
-    else:
-        # called with un-dotted string
-        return __import__(parts[0])
+    pass
 
 
 class JupyterServerAuthWarning(RuntimeWarning):

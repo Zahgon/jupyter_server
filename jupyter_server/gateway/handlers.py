@@ -46,7 +46,7 @@ class WebSocketChannelsHandler(WebSocketHandler, JupyterHandler):
 
     def check_origin(self, origin=None):
         """Check origin for the socket."""
-        return JupyterHandler.check_origin(self, origin)
+        pass
 
     def set_default_headers(self):
         """Undo the set_default_headers in JupyterHandler which doesn't make sense for websockets"""
@@ -61,29 +61,15 @@ class WebSocketChannelsHandler(WebSocketHandler, JupyterHandler):
         Extend this method to add logic that should fire before
         the websocket finishes completing.
         """
-        # authenticate the request before opening the websocket
-        if self.current_user is None:
-            self.log.warning("Couldn't authenticate WebSocket connection")
-            raise web.HTTPError(403)
-
-        if self.get_argument("session_id", None):
-            assert self.session is not None
-            self.session.session = self.get_argument("session_id")  # type:ignore[unreachable]
-        else:
-            self.log.warning("No session ID specified")
+        pass
 
     def initialize(self):
         """Initialize the socket."""
-        self.log.debug("Initializing websocket connection %s", self.request.path)
-        self.session = Session(config=self.config)
-        self.gateway = GatewayWebSocketClient(gateway_url=GatewayClient.instance().url)
+        pass
 
     async def get(self, kernel_id, *args, **kwargs):
         """Get the socket."""
-        self.authenticate()
-        self.kernel_id = kernel_id
-        kwargs["kernel_id"] = kernel_id
-        await super().get(*args, **kwargs)
+        pass
 
     def send_ping(self):
         """Send a ping to the socket."""
@@ -99,15 +85,7 @@ class WebSocketChannelsHandler(WebSocketHandler, JupyterHandler):
 
     def write_message(self, message, binary=False):
         """Send message back to notebook client.  This is called via callback from self.gateway._read_messages."""
-        if self.ws_connection:  # prevent WebSocketClosedError
-            if isinstance(message, bytes):
-                binary = True
-            super().write_message(message, binary=binary)
-        elif self.log.isEnabledFor(logging.DEBUG):
-            msg_summary = WebSocketChannelsHandler._get_message_summary(json_decode(utf8(message)))
-            self.log.debug(
-                f"Notebook client closed websocket connection - message dropped: {msg_summary}"
-            )
+        pass
 
     def on_close(self):
         """Handle a closing socket."""
@@ -116,24 +94,7 @@ class WebSocketChannelsHandler(WebSocketHandler, JupyterHandler):
     @staticmethod
     def _get_message_summary(message):
         """Get a summary of a message."""
-        summary = []
-        message_type = message["msg_type"]
-        summary.append(f"type: {message_type}")
-
-        if message_type == "status":
-            summary.append(", state: {}".format(message["content"]["execution_state"]))
-        elif message_type == "error":
-            summary.append(
-                ", {}:{}:{}".format(
-                    message["content"]["ename"],
-                    message["content"]["evalue"],
-                    message["content"]["traceback"],
-                )
-            )
-        else:
-            summary.append(", ...")  # don't display potentially sensitive data
-
-        return "".join(summary)
+        pass
 
 
 class GatewayWebSocketClient(LoggingConfigurable):
@@ -162,46 +123,7 @@ class GatewayWebSocketClient(LoggingConfigurable):
 
     async def _read_messages(self, callback):
         """Read messages from gateway server."""
-        while self.ws is not None:
-            message = None
-            if not self.disconnected:
-                try:
-                    message = await self.ws.read_message()
-                except Exception as e:
-                    self.log.error(
-                        f"Exception reading message from websocket: {e}"
-                    )  # , exc_info=True)
-                if message is None:
-                    if not self.disconnected:
-                        self.log.warning(f"Lost connection to Gateway: {self.kernel_id}")
-                    break
-                callback(
-                    message
-                )  # pass back to notebook client (see self.on_open and WebSocketChannelsHandler.open)
-            else:  # ws cancelled - stop reading
-                break
-
-        # NOTE(esevan): if websocket is not disconnected by client, try to reconnect.
-        if not self.disconnected and self.retry < GatewayClient.instance().gateway_retry_max:
-            jitter = random.randint(10, 100) * 0.01  # noqa: S311
-            retry_interval = (
-                min(
-                    GatewayClient.instance().gateway_retry_interval * (2**self.retry),
-                    GatewayClient.instance().gateway_retry_interval_max,
-                )
-                + jitter
-            )
-            self.retry += 1
-            self.log.info(
-                "Attempting to re-establish the connection to Gateway in %s secs (%s/%s): %s",
-                retry_interval,
-                self.retry,
-                GatewayClient.instance().gateway_retry_max,
-                self.kernel_id,
-            )
-            await asyncio.sleep(retry_interval)
-            loop = IOLoop.current()
-            loop.spawn_callback(self._connect, self.kernel_id, callback)
+        pass
 
     def on_open(self, kernel_id, message_callback, **kwargs):
         """Web socket connection open against gateway server."""
@@ -226,19 +148,7 @@ class GatewayResourceHandler(APIHandler):
     @web.authenticated
     async def get(self, kernel_name, path, include_body=True):
         """Get a gateway resource by name and path."""
-        mimetype: Optional[str] = None
-        ksm = self.kernel_spec_manager
-        kernel_spec_res = await ksm.get_kernel_spec_resource(  # type:ignore[attr-defined]
-            kernel_name, path
-        )
-        if kernel_spec_res is None:
-            self.log.warning(
-                f"Kernelspec resource '{path}' for '{kernel_name}' not found.  Gateway may not support"
-                " resource serving."
-            )
-        else:
-            mimetype = mimetypes.guess_type(path)[0] or "text/plain"
-        self.finish(kernel_spec_res, set_content_type=mimetype)
+        pass
 
 
 from ..services.kernels.handlers import _kernel_id_regex

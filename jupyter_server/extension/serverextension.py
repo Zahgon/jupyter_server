@@ -31,15 +31,7 @@ def _get_config_dir(user: bool = False, sys_prefix: bool = False) -> str:
     sys_prefix : bool [default: False]
         Get sys.prefix, i.e. ~/.envs/my-env/etc/jupyter
     """
-    if user and sys_prefix:
-        sys_prefix = False
-    if user:
-        extdir = jupyter_config_dir()
-    elif sys_prefix:
-        extdir = ENV_CONFIG_PATH[0]
-    else:
-        extdir = SYSTEM_CONFIG_PATH[0]
-    return extdir
+    pass
 
 
 def _get_extmanager_for_context(
@@ -58,15 +50,7 @@ def _get_extmanager_for_context(
     sys_prefix : bool [default: False]
         Get sys.prefix, i.e. ~/.envs/my-env/etc/jupyter
     """
-    config_dir = _get_config_dir(user=user, sys_prefix=sys_prefix)
-    config_manager = ExtensionConfigManager(
-        read_config_path=[config_dir],
-        write_config_dir=os.path.join(config_dir, write_dir),
-    )
-    extension_manager = ExtensionManager(
-        config_manager=config_manager,
-    )
-    return config_dir, extension_manager
+    pass
 
 
 class ArgumentConflict(ValueError):
@@ -163,16 +147,7 @@ def toggle_server_extension_python(
     """Toggle the boolean setting for a given server extension
     in a Jupyter config file.
     """
-    sys_prefix = False if user else sys_prefix
-    config_dir = _get_config_dir(user=user, sys_prefix=sys_prefix)
-    manager = ExtensionConfigManager(
-        read_config_path=[config_dir],
-        write_config_dir=os.path.join(config_dir, "jupyter_server_config.d"),
-    )
-    if enabled:
-        manager.enable(import_name)
-    else:
-        manager.disable(import_name)
+    pass
 
 
 # ----------------------------------------------------------------------
@@ -250,54 +225,11 @@ class ToggleServerExtensionApp(BaseExtensionApp):
             Importable Python module (dotted-notation) exposing the magic-named
             `load_jupyter_server_extension` function
         """
-        # Create an extension manager for this instance.
-        config_dir, extension_manager = _get_extmanager_for_context(
-            user=self.user, sys_prefix=self.sys_prefix
-        )
-        try:
-            self.log.info(f"{self._toggle_pre_message.capitalize()}: {import_name}")
-            self.log.info(f"- Writing config: {config_dir}")
-            # Validate the server extension.
-            self.log.info(f"    - Validating {import_name}...")
-            config = extension_manager.config_manager
-            enabled = False
-            if config:
-                jpserver_extensions = config.get_jpserver_extensions()
-                if import_name not in jpserver_extensions:
-                    msg = (
-                        f"The module '{import_name}' could not be found. Are you "
-                        "sure the extension is installed?"
-                    )
-                    raise ValueError(msg)
-                enabled = jpserver_extensions[import_name]
-
-            # Interface with the Extension Package and validate.
-            extpkg = ExtensionPackage(name=import_name, enabled=enabled)
-            if not extpkg.validate():
-                msg = "validation failed"
-                raise ValueError(msg)
-            version = extpkg.version
-            self.log.info(f"      {import_name} {version} {GREEN_OK}")
-
-            # Toggle extension config.
-            config = extension_manager.config_manager
-            if config:
-                if self._toggle_value is True:
-                    config.enable(import_name)
-                else:
-                    config.disable(import_name)
-
-            # If successful, let's log.
-            self.log.info(f"    - Extension successfully {self._toggle_post_message}.")
-        except Exception as err:
-            self.log.error(f"     {RED_X} Validation failed: {err}")
+        pass
 
     def start(self) -> None:
         """Perform the App's actions as configured"""
-        if not self.extra_args:
-            sys.exit("Please specify a server extension/package to enable or disable")
-        for arg in self.extra_args:
-            self.toggle_server_extension(arg)
+        pass
 
 
 class EnableServerExtensionApp(ToggleServerExtensionApp):
@@ -342,41 +274,11 @@ class ListServerExtensionsApp(BaseExtensionApp):
 
         Enabled extensions are validated, potentially generating warnings.
         """
-        configurations = (
-            {"user": True, "sys_prefix": False},
-            {"user": False, "sys_prefix": True},
-            {"user": False, "sys_prefix": False},
-        )
-
-        for option in configurations:
-            config_dir = _get_config_dir(**option)
-            print(f"Config dir: {config_dir}")
-            write_dir = "jupyter_server_config.d"
-            config_manager = ExtensionConfigManager(
-                read_config_path=[config_dir],
-                write_config_dir=os.path.join(config_dir, write_dir),
-            )
-            jpserver_extensions = config_manager.get_jpserver_extensions()
-            for name, enabled in jpserver_extensions.items():
-                # Attempt to get extension metadata
-                print(f"    {name} {GREEN_ENABLED if enabled else RED_DISABLED}")
-                try:
-                    print(f"    - Validating {name}...")
-                    extension = ExtensionPackage(name=name, enabled=enabled)
-                    if not extension.validate():
-                        msg = "validation failed"
-                        raise ValueError(msg)
-                    version = extension.version
-                    print(f"      {name} {version} {GREEN_OK}")
-                except Exception as err:
-                    self.log.debug("", exc_info=True)
-                    print(f"      {RED_X} {err}")
-            # Add a blank line between paths.
-            self.log.info("")
+        pass
 
     def start(self) -> None:
         """Perform the App's actions as configured"""
-        self.list_server_extensions()
+        pass
 
 
 _examples = """
@@ -402,12 +304,7 @@ class ServerExtensionApp(BaseExtensionApp):
 
     def start(self) -> None:
         """Perform the App's actions as configured"""
-        super().start()
-
-        # The above should have called a subcommand and raised NoStart; if we
-        # get here, it didn't, so we should self.log.info a message.
-        subcmds = ", ".join(sorted(self.subcommands))
-        sys.exit("Please supply at least one subcommand: %s" % subcmds)
+        pass
 
 
 main = ServerExtensionApp.launch_instance

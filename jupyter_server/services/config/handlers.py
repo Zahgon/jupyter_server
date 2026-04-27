@@ -22,24 +22,19 @@ class ConfigHandler(APIHandler):
     @authorized
     def get(self, section_name):
         """Get config by section name."""
-        self.set_header("Content-Type", "application/json")
-        self.finish(json.dumps(self.config_manager.get(section_name)))
+        pass
 
     @web.authenticated
     @authorized
     def put(self, section_name):
         """Set a config section by name."""
-        data = self.get_json_body()  # Will raise 400 if content is not valid JSON
-        self.config_manager.set(section_name, data)
-        self.set_status(204)
+        pass
 
     @web.authenticated
     @authorized
     def patch(self, section_name):
         """Update a config section by name."""
-        new_data = self.get_json_body()
-        section = self.config_manager.update(section_name, new_data)
-        self.finish(json.dumps(section))
+        pass
 
 
 # URL to handler mappings

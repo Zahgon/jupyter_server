@@ -22,20 +22,7 @@ def recursive_update(target: StrDict, new: StrDict) -> None:
 
     None values will delete their keys.
     """
-    for k, v in new.items():
-        if isinstance(v, dict):
-            if k not in target:
-                target[k] = {}
-            recursive_update(target[k], v)
-            if not target[k]:
-                # Prune empty subdicts
-                del target[k]
-
-        elif v is None:
-            target.pop(k, None)
-
-        else:
-            target[k] = v
+    pass
 
 
 def remove_defaults(data: StrDict, defaults: StrDict) -> None:
@@ -59,11 +46,11 @@ class BaseJSONConfigManager(LoggingConfigurable):
 
     def file_name(self, section_name: str) -> str:
         """Returns the json filename for the section_name: {config_dir}/{section_name}.json"""
-        return os.path.join(self.config_dir, section_name + ".json")
+        pass
 
     def directory(self, section_name: str) -> str:
         """Returns the directory name for the section name: {config_dir}/{section_name}.d"""
-        return os.path.join(self.config_dir, section_name + ".d")
+        pass
 
     def get(self, section_name: str, include_root: bool = True) -> dict[str, t.Any]:
         """Retrieve the config data for the specified section.
@@ -74,29 +61,7 @@ class BaseJSONConfigManager(LoggingConfigurable):
         When include_root is False, it will not read the root .json file,
         effectively returning the default values.
         """
-        paths = [self.file_name(section_name)] if include_root else []
-        if self.read_directory:
-            pattern = os.path.join(self.directory(section_name), "*.json")
-            # These json files should be processed first so that the
-            # {section_name}.json take precedence.
-            # The idea behind this is that installing a Python package may
-            # put a json file somewhere in the a .d directory, while the
-            # .json file is probably a user configuration.
-            paths = sorted(glob.glob(pattern)) + paths
-        self.log.debug(
-            "Paths used for configuration of %s: \n\t%s",
-            section_name,
-            "\n\t".join(paths),
-        )
-        data: dict[str, t.Any] = {}
-        for path in paths:
-            if os.path.isfile(path) and os.path.getsize(path):
-                with open(path, encoding="utf-8") as f:
-                    try:
-                        recursive_update(data, json.load(f))
-                    except json.decoder.JSONDecodeError:
-                        self.log.warning("Invalid JSON in %s, skipping", path)
-        return data
+        pass
 
     def set(self, section_name: str, data: t.Any) -> None:
         """Store the given config data."""
@@ -107,7 +72,4 @@ class BaseJSONConfigManager(LoggingConfigurable):
 
         Returns the modified config data as a dictionary.
         """
-        data = self.get(section_name)
-        recursive_update(data, new_data)
-        self.set(section_name, data)
-        return data
+        pass

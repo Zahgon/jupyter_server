@@ -61,39 +61,15 @@ class TypeFromClasses(ClassBasedTraitType):  # type:ignore[type-arg]
 
     def subclass_from_klasses(self, value):
         """Check that a given class is a subclasses found in the klasses list."""
-        return any(issubclass(value, klass) for klass in self.importable_klasses)
+        pass
 
     def validate(self, obj, value):
         """Validates that the value is a valid object instance."""
-        if isinstance(value, str):
-            try:
-                value = self._resolve_string(value)
-            except ImportError as e:
-                emsg = (
-                    f"The '{self.name}' trait of {obj} instance must be a type, but "
-                    f"{value!r} could not be imported"
-                )
-                raise TraitError(emsg) from e
-        try:
-            if self.subclass_from_klasses(value):
-                return value
-        except Exception:
-            pass
-
-        self.error(obj, value)
+        pass
 
     def info(self):
         """Returns a description of the trait."""
-        result = "a subclass of "
-        for klass in self.klasses:
-            if not isinstance(klass, str):
-                klass = klass.__module__ + "." + klass.__name__  # noqa: PLW2901
-            result += f"{klass} or "
-        # Strip the last "or"
-        result = result.strip(" or ")  # noqa: B005
-        if self.allow_none:
-            return result + " or None"
-        return result
+        pass
 
     def instance_init(self, obj):
         """Initialize an instance."""
@@ -163,29 +139,15 @@ class InstanceFromClasses(ClassBasedTraitType):  # type:ignore[type-arg]
 
     def instance_from_importable_klasses(self, value):
         """Check that a given class is a subclasses found in the klasses list."""
-        return any(isinstance(value, klass) for klass in self.importable_klasses)
+        pass
 
     def validate(self, obj, value):
         """Validate an instance."""
-        if self.instance_from_importable_klasses(value):
-            return value
-        else:
-            self.error(obj, value)
+        pass
 
     def info(self):
         """Get the trait info."""
-        result = "an instance of "
-        assert self.klasses is not None
-        for klass in self.klasses:
-            if isinstance(klass, str):
-                result += klass
-            else:
-                result += describe("a", klass)
-            result += " or "
-        result = result.strip(" or ")  # noqa: B005
-        if self.allow_none:
-            result += " or None"
-        return result
+        pass
 
     def instance_init(self, obj):
         """Initialize the trait."""

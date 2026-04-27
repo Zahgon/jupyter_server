@@ -37,9 +37,7 @@ class MainKernelHandler(KernelsAPIHandler):
     @authorized
     async def get(self):
         """Get the list of running kernels."""
-        km = self.kernel_manager
-        kernels = await ensure_async(km.list_kernels())
-        self.finish(json.dumps(kernels, default=json_default))
+        pass
 
     @web.authenticated
     @authorized
@@ -55,9 +53,7 @@ class KernelHandler(KernelsAPIHandler):
     @authorized
     async def get(self, kernel_id):
         """Get a kernel model."""
-        km = self.kernel_manager
-        model = await ensure_async(km.kernel_model(kernel_id))
-        self.finish(json.dumps(model, default=json_default))
+        pass
 
     @web.authenticated
     @authorized

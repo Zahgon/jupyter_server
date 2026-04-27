@@ -25,12 +25,7 @@ class ExtensionHandlerJinjaMixin:
 
     def get_template(self, name: str) -> Template:
         """Return the jinja template object for a given name"""
-        try:
-            env = f"{self.name}_jinja2_env"  # type:ignore[attr-defined]
-            template = cast("Template", self.settings[env].get_template(name))  # type:ignore[attr-defined]
-            return template
-        except TemplateNotFound:
-            return cast("Template", super().get_template(name))  # type:ignore[misc]
+        pass
 
 
 class ExtensionHandlerMixin:
@@ -47,11 +42,7 @@ class ExtensionHandlerMixin:
     settings: dict[str, Any]
 
     def initialize(self, name: str, *args: Any, **kwargs: Any) -> None:
-        self.name = name
-        try:
-            super().initialize(*args, **kwargs)  # type:ignore[misc]
-        except TypeError:
-            pass
+        pass
 
     @property
     def extensionapp(self) -> ExtensionApp:
@@ -90,12 +81,7 @@ class ExtensionHandlerMixin:
         (e.g. default error pages)
         make sure our extension-specific static_url is _not_ used.
         """
-        template = cast("Template", self.get_template(name))  # type:ignore[attr-defined]
-        ns.update(self.template_namespace)  # type:ignore[attr-defined]
-        if template.environment is self.settings["jinja2_env"]:
-            # default template environment, use default static_url
-            ns["static_url"] = super().static_url  # type:ignore[misc]
-        return cast("str", template.render(**ns))
+        pass
 
     @property
     def static_url_prefix(self) -> str:

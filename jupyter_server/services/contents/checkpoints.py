@@ -23,28 +23,27 @@ class Checkpoints(LoggingConfigurable):
 
     def create_checkpoint(self, contents_mgr, path):
         """Create a checkpoint."""
-        raise NotImplementedError
+        pass
 
     def restore_checkpoint(self, contents_mgr, checkpoint_id, path):
         """Restore a checkpoint"""
-        raise NotImplementedError
+        pass
 
     def rename_checkpoint(self, checkpoint_id, old_path, new_path):
         """Rename a single checkpoint from old_path to new_path."""
-        raise NotImplementedError
+        pass
 
     def delete_checkpoint(self, checkpoint_id, path):
         """delete a checkpoint for a file"""
-        raise NotImplementedError
+        pass
 
     def list_checkpoints(self, path):
         """Return a list of checkpoints for a given file"""
-        raise NotImplementedError
+        pass
 
     def rename_all_checkpoints(self, old_path, new_path):
         """Rename all checkpoints for old_path to new_path."""
-        for cp in self.list_checkpoints(old_path):
-            self.rename_checkpoint(cp["id"], old_path, new_path)
+        pass
 
     def delete_all_checkpoints(self, path):
         """Delete all checkpoints for the given path."""
@@ -74,21 +73,7 @@ class GenericCheckpointsMixin:
     """
 
     def create_checkpoint(self, contents_mgr, path):
-        model = contents_mgr.get(path, content=True)
-        type_ = model["type"]
-        if type_ == "notebook":
-            return self.create_notebook_checkpoint(
-                model["content"],
-                path,
-            )
-        elif type_ == "file":
-            return self.create_file_checkpoint(
-                model["content"],
-                model["format"],
-                path,
-            )
-        else:
-            raise HTTPError(500, "Unexpected type %s" % type)
+        pass
 
     def restore_checkpoint(self, contents_mgr, checkpoint_id, path):
         """Restore a checkpoint."""
@@ -100,14 +85,14 @@ class GenericCheckpointsMixin:
 
         Returns a checkpoint model for the new checkpoint.
         """
-        raise NotImplementedError
+        pass
 
     def create_notebook_checkpoint(self, nb, path):
         """Create a checkpoint of the current state of a file
 
         Returns a checkpoint model for the new checkpoint.
         """
-        raise NotImplementedError
+        pass
 
     def get_file_checkpoint(self, checkpoint_id, path):
         """Get the content of a checkpoint for a non-notebook file.
@@ -120,7 +105,7 @@ class GenericCheckpointsMixin:
                 'format': {'text','base64'},
             }
         """
-        raise NotImplementedError
+        pass
 
     def get_notebook_checkpoint(self, checkpoint_id, path):
         """Get the content of a checkpoint for a notebook.
@@ -132,7 +117,7 @@ class GenericCheckpointsMixin:
                 'content': <output of nbformat.read>,
             }
         """
-        raise NotImplementedError
+        pass
 
 
 class AsyncCheckpoints(Checkpoints):
@@ -142,28 +127,27 @@ class AsyncCheckpoints(Checkpoints):
 
     async def create_checkpoint(self, contents_mgr, path):
         """Create a checkpoint."""
-        raise NotImplementedError
+        pass
 
     async def restore_checkpoint(self, contents_mgr, checkpoint_id, path):
         """Restore a checkpoint"""
-        raise NotImplementedError
+        pass
 
     async def rename_checkpoint(self, checkpoint_id, old_path, new_path):
         """Rename a single checkpoint from old_path to new_path."""
-        raise NotImplementedError
+        pass
 
     async def delete_checkpoint(self, checkpoint_id, path):
         """delete a checkpoint for a file"""
-        raise NotImplementedError
+        pass
 
     async def list_checkpoints(self, path):
         """Return a list of checkpoints for a given file"""
-        raise NotImplementedError
+        pass
 
     async def rename_all_checkpoints(self, old_path, new_path):
         """Rename all checkpoints for old_path to new_path."""
-        for cp in await self.list_checkpoints(old_path):
-            await self.rename_checkpoint(cp["id"], old_path, new_path)
+        pass
 
     async def delete_all_checkpoints(self, path):
         """Delete all checkpoints for the given path."""
@@ -177,21 +161,7 @@ class AsyncGenericCheckpointsMixin(GenericCheckpointsMixin):
     """
 
     async def create_checkpoint(self, contents_mgr, path):
-        model = await contents_mgr.get(path, content=True)
-        type_ = model["type"]
-        if type_ == "notebook":
-            return await self.create_notebook_checkpoint(
-                model["content"],
-                path,
-            )
-        elif type_ == "file":
-            return await self.create_file_checkpoint(
-                model["content"],
-                model["format"],
-                path,
-            )
-        else:
-            raise HTTPError(500, "Unexpected type %s" % type_)
+        pass
 
     async def restore_checkpoint(self, contents_mgr, checkpoint_id, path):
         """Restore a checkpoint."""
@@ -203,14 +173,14 @@ class AsyncGenericCheckpointsMixin(GenericCheckpointsMixin):
 
         Returns a checkpoint model for the new checkpoint.
         """
-        raise NotImplementedError
+        pass
 
     async def create_notebook_checkpoint(self, nb, path):
         """Create a checkpoint of the current state of a file
 
         Returns a checkpoint model for the new checkpoint.
         """
-        raise NotImplementedError
+        pass
 
     async def get_file_checkpoint(self, checkpoint_id, path):
         """Get the content of a checkpoint for a non-notebook file.
@@ -223,7 +193,7 @@ class AsyncGenericCheckpointsMixin(GenericCheckpointsMixin):
                 'format': {'text','base64'},
             }
         """
-        raise NotImplementedError
+        pass
 
     async def get_notebook_checkpoint(self, checkpoint_id, path):
         """Get the content of a checkpoint for a notebook.
@@ -235,4 +205,4 @@ class AsyncGenericCheckpointsMixin(GenericCheckpointsMixin):
                 'content': <output of nbformat.read>,
             }
         """
-        raise NotImplementedError
+        pass

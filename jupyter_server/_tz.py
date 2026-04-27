@@ -28,11 +28,11 @@ class tzUTC(tzinfo):  # noqa: N801
 
 def utcnow() -> datetime:
     """Return timezone-aware UTC timestamp"""
-    return datetime.now(timezone.utc)
+    pass
 
 
 def utcfromtimestamp(timestamp: float) -> datetime:
-    return datetime.fromtimestamp(timestamp, timezone.utc)
+    pass
 
 
 UTC = tzUTC()  # type:ignore[abstract]
@@ -43,4 +43,4 @@ def isoformat(dt: datetime) -> str:
 
     Like .isoformat(), but uses Z for UTC instead of +00:00
     """
-    return dt.isoformat().replace("+00:00", "Z")
+    pass

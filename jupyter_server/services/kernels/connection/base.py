@@ -36,18 +36,7 @@ def serialize_binary_message(msg):
     The message serialized to bytes.
 
     """
-    # don't modify msg or buffer list in-place
-    msg = msg.copy()
-    buffers = list(msg.pop("buffers"))
-    bmsg = json.dumps(msg, default=json_default).encode("utf8")
-    buffers.insert(0, bmsg)
-    nbufs = len(buffers)
-    offsets = [4 * (nbufs + 1)]
-    for buf in buffers[:-1]:
-        offsets.append(offsets[-1] + len(buf))
-    offsets_buf = struct.pack("!" + "I" * (nbufs + 1), nbufs, *offsets)
-    buffers.insert(0, offsets_buf)
-    return b"".join(buffers)
+    pass
 
 
 def deserialize_binary_message(bmsg):
@@ -64,51 +53,17 @@ def deserialize_binary_message(bmsg):
     -------
     message dictionary
     """
-    nbufs = struct.unpack("!i", bmsg[:4])[0]
-    offsets = list(struct.unpack("!" + "I" * nbufs, bmsg[4 : 4 * (nbufs + 1)]))
-    offsets.append(None)
-    bufs = []
-    for start, stop in zip(offsets[:-1], offsets[1:]):
-        bufs.append(bmsg[start:stop])
-    msg = json.loads(bufs[0].decode("utf8"))
-    msg["header"] = extract_dates(msg["header"])
-    msg["parent_header"] = extract_dates(msg["parent_header"])
-    msg["buffers"] = bufs[1:]
-    return msg
+    pass
 
 
 def serialize_msg_to_ws_v1(msg_or_list, channel, pack=None):
     """Serialize a message using the v1 protocol."""
-    if pack:
-        msg_list = [
-            pack(msg_or_list["header"]),
-            pack(msg_or_list["parent_header"]),
-            pack(msg_or_list["metadata"]),
-            pack(msg_or_list["content"]),
-        ]
-    else:
-        msg_list = msg_or_list
-    channel = channel.encode("utf-8")
-    offsets: list[Any] = []
-    offsets.append(8 * (1 + 1 + len(msg_list) + 1))
-    offsets.append(len(channel) + offsets[-1])
-    for msg in msg_list:
-        offsets.append(len(msg) + offsets[-1])
-    offset_number = len(offsets).to_bytes(8, byteorder="little")
-    offsets = [offset.to_bytes(8, byteorder="little") for offset in offsets]
-    bin_msg = b"".join([offset_number, *offsets, channel, *msg_list])
-    return bin_msg
+    pass
 
 
 def deserialize_msg_from_ws_v1(ws_msg):
     """Deserialize a message using the v1 protocol."""
-    offset_number = int.from_bytes(ws_msg[:8], "little")
-    offsets = [
-        int.from_bytes(ws_msg[8 * (i + 1) : 8 * (i + 2)], "little") for i in range(offset_number)
-    ]
-    channel = ws_msg[offsets[0] : offsets[1]].decode("utf-8")
-    msg_list = [ws_msg[offsets[i] : offsets[i + 1]] for i in range(1, offset_number - 1)]
-    return channel, msg_list
+    pass
 
 
 class BaseKernelWebsocketConnection(LoggingConfigurable):
@@ -163,19 +118,19 @@ class BaseKernelWebsocketConnection(LoggingConfigurable):
 
     async def connect(self):
         """Handle a connect."""
-        raise NotImplementedError
+        pass
 
     async def disconnect(self):
         """Handle a disconnect."""
-        raise NotImplementedError
+        pass
 
     def handle_incoming_message(self, incoming_msg: str) -> None:
         """Handle an incoming message."""
-        raise NotImplementedError
+        pass
 
     def handle_outgoing_message(self, stream: str, outgoing_msg: list[Any]) -> None:
         """Handle an outgoing message."""
-        raise NotImplementedError
+        pass
 
 
 KernelWebsocketConnectionABC.register(BaseKernelWebsocketConnection)

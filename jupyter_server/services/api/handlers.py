@@ -25,7 +25,7 @@ class APISpecHandler(web.StaticFileHandler, JupyterHandler):
 
     def initialize(self):  # type: ignore[override]
         """Initialize the API spec handler."""
-        web.StaticFileHandler.initialize(self, path=os.path.dirname(__file__))
+        pass
 
     @web.authenticated
     @authorized
@@ -36,8 +36,7 @@ class APISpecHandler(web.StaticFileHandler, JupyterHandler):
     @authorized
     def get(self):  # type: ignore[override]
         """Get the API spec."""
-        self.log.warning("Serving api spec (experimental, incomplete)")
-        return web.StaticFileHandler.get(self, "api.yaml")
+        pass
 
     def get_content_type(self):
         """Get the content type."""
@@ -54,20 +53,7 @@ class APIStatusHandler(APIHandler):
     @authorized
     async def get(self):
         """Get the API status."""
-        # if started was missing, use unix epoch
-        started = self.settings.get("started", utcfromtimestamp(0))
-        started = isoformat(started)
-
-        kernels = await ensure_async(self.kernel_manager.list_kernels())
-        total_connections = sum(k["connections"] for k in kernels)
-        last_activity = isoformat(self.application.last_activity())  # type:ignore[attr-defined]
-        model = {
-            "started": started,
-            "last_activity": last_activity,
-            "kernels": len(kernels),
-            "connections": total_connections,
-        }
-        self.finish(json.dumps(model, sort_keys=True))
+        pass
 
 
 class IdentityHandler(APIHandler):
@@ -76,68 +62,12 @@ class IdentityHandler(APIHandler):
     @web.authenticated
     async def get(self):
         """Get the identity model."""
-        permissions_json: str = self.get_argument("permissions", "")
-        bad_permissions_msg = f'permissions should be a JSON dict of {{"resource": ["action",]}}, got {permissions_json!r}'
-        if permissions_json:
-            try:
-                permissions_to_check = json.loads(permissions_json)
-            except ValueError as e:
-                raise web.HTTPError(400, bad_permissions_msg) from e
-            if not isinstance(permissions_to_check, dict):
-                raise web.HTTPError(400, bad_permissions_msg)
-        else:
-            permissions_to_check = {}
-
-        permissions: dict[str, list[str]] = {}
-        user = self.current_user
-
-        for resource, actions in permissions_to_check.items():
-            if (
-                not isinstance(resource, str)
-                or not isinstance(actions, list)
-                or not all(isinstance(action, str) for action in actions)
-            ):
-                raise web.HTTPError(400, bad_permissions_msg)
-
-            allowed = permissions[resource] = []
-            for action in actions:
-                authorized = await ensure_async(
-                    self.authorizer.is_authorized(self, user, action, resource)
-                )
-                if authorized:
-                    allowed.append(action)
-
-        # Add permission to user to update their own identity
-        permissions["updatable_fields"] = self.identity_provider.updatable_fields
-
-        identity: dict[str, Any] = self.identity_provider.identity_model(user)
-        model = {
-            "identity": identity,
-            "permissions": permissions,
-        }
-        self.write(json.dumps(model))
+        pass
 
     @web.authenticated
     async def patch(self):
         """Update user information."""
-        user_data = cast("dict[UpdatableField, str]", self.get_json_body())
-        if not user_data:
-            raise web.HTTPError(400, "Invalid or missing JSON body")
-
-        # Update user information
-        identity_provider = self.settings["identity_provider"]
-        if not isinstance(identity_provider, IdentityProvider):
-            raise web.HTTPError(500, "Identity provider not configured properly")
-
-        try:
-            updated_user = identity_provider.update_user(self, user_data)
-            self.write(
-                {"status": "success", "identity": identity_provider.identity_model(updated_user)}
-            )
-        except ValueError as e:
-            raise web.HTTPError(400, str(e)) from e
-        except NotImplementedError as e:
-            raise web.HTTPError(501, str(e)) from e
+        pass
 
 
 default_handlers = [

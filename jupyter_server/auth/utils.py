@@ -33,28 +33,7 @@ def get_regex_to_resource_map():
     e.g.
     { "/api/contents/<regex_pattern>": "contents", ...}
     """
-    from jupyter_server.serverapp import JUPYTER_SERVICE_HANDLERS
-
-    modules = []
-    for mod_name in JUPYTER_SERVICE_HANDLERS.values():
-        if mod_name:
-            modules.extend(mod_name)
-    resource_map = {}
-    for handler_module in modules:
-        mod = importlib.import_module(handler_module)
-        name = mod.AUTH_RESOURCE
-        for handler in mod.default_handlers:
-            url_regex = handler[0]
-            resource_map[url_regex] = name
-    # terminal plugin doesn't have importable url patterns
-    # get these from terminal/__init__.py
-    for url_regex in [
-        r"/terminals/websocket/(\w+)",
-        "/api/terminals",
-        r"/api/terminals/(\w+)",
-    ]:
-        resource_map[url_regex] = "terminals"
-    return resource_map
+    pass
 
 
 def match_url_to_resource(url, regex_mapping=None):
@@ -65,12 +44,7 @@ def match_url_to_resource(url, regex_mapping=None):
     e.g.
     /api/contents/... returns "contents"
     """
-    if not regex_mapping:
-        regex_mapping = get_regex_to_resource_map()
-    for regex, auth_resource in regex_mapping.items():
-        pattern = re.compile(regex)
-        if pattern.fullmatch(url):
-            return auth_resource
+    pass
 
 
 # From https://en.wikipedia.org/wiki/Moons_of_Jupiter
@@ -162,4 +136,4 @@ def get_anonymous_username() -> str:
     Get a random user-name based on the moons of Jupyter.
     This function returns names like "Anonymous Io" or "Anonymous Metis".
     """
-    return moons_of_jupyter[random.randint(0, len(moons_of_jupyter) - 1)]  # noqa: S311
+    pass

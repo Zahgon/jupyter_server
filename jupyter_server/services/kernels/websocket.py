@@ -35,35 +35,12 @@ class KernelWebsocketHandler(WebSocketMixin, WebSocketHandler, JupyterHandler):
 
     async def pre_get(self):
         """Handle a pre_get."""
-        user = self.current_user
-
-        # authorize the user.
-        authorized = await ensure_async(
-            self.authorizer.is_authorized(self, user, "execute", "kernels")
-        )
-        if not authorized:
-            raise web.HTTPError(403)
-
-        kernel = self.kernel_manager.get_kernel(self.kernel_id)
-        self.connection = self.kernel_websocket_connection_class(
-            parent=kernel, websocket_handler=self, config=self.config
-        )
-
-        if self.get_argument("session_id", None):
-            self.connection.session.session = self.get_argument("session_id")
-        else:
-            self.log.warning("No session ID specified")
-        # For backwards compatibility with older versions
-        # of the websocket connection, call a prepare method if found.
-        if hasattr(self.connection, "prepare"):
-            await self.connection.prepare()
+        pass
 
     @ws_authenticated
     async def get(self, kernel_id):
         """Handle a get request for a kernel."""
-        self.kernel_id = kernel_id
-        await self.pre_get()
-        await super().get(kernel_id=kernel_id)
+        pass
 
     async def open(self, kernel_id):  # type: ignore[override]
         """Open a kernel websocket."""

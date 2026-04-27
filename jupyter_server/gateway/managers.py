@@ -60,10 +60,7 @@ class GatewayMappingKernelManager(AsyncMappingKernelManager):
 
     def remove_kernel(self, kernel_id):
         """Complete override since we want to be more tolerant of missing keys"""
-        try:
-            return self._kernels.pop(kernel_id)
-        except KeyError:
-            pass
+        pass
 
     async def start_kernel(self, *, kernel_id=None, path=None, **kwargs):
         """Start a kernel for a session and return its kernel_id.
@@ -78,20 +75,7 @@ class GatewayMappingKernelManager(AsyncMappingKernelManager):
             The API path (unicode, '/' delimited) for the cwd.
             Will be transformed to an OS path relative to root_dir.
         """
-        self.log.info(f"Request start kernel: kernel_id={kernel_id}, path='{path}'")
-
-        if kernel_id is None and path is not None:
-            kwargs["cwd"] = self.cwd_for_path(path)
-
-        km = self.kernel_manager_factory(parent=self, log=self.log)
-        await km.start_kernel(kernel_id=kernel_id, **kwargs)
-        kernel_id = km.kernel_id
-        self._kernels[kernel_id] = km
-        # Initialize culling if not already
-        if not self._initialized_culler:
-            self.initialize_culler()
-
-        return kernel_id
+        pass
 
     async def kernel_model(self, kernel_id):
         """Return a dictionary of kernel information described in the
@@ -102,11 +86,7 @@ class GatewayMappingKernelManager(AsyncMappingKernelManager):
         kernel_id : uuid
             The uuid of the kernel.
         """
-        model = None
-        km = self.get_kernel(str(kernel_id))
-        if km:  # type:ignore[truthy-bool]
-            model = km.kernel  # type:ignore[attr-defined]
-        return model
+        pass
 
     async def list_kernels(self, **kwargs):
         """Get a list of running kernels from the Gateway server.
@@ -114,51 +94,7 @@ class GatewayMappingKernelManager(AsyncMappingKernelManager):
         We'll use this opportunity to refresh the models in each of
         the kernels we're managing.
         """
-        self.log.debug(f"Request list kernels: {self.kernels_url}")
-        response = await gateway_request(self.kernels_url, method="GET")
-        kernels = json_decode(response.body)
-        # Refresh our models to those we know about, and filter
-        # the return value with only our kernels.
-        kernel_models = {}
-        for model in kernels:
-            kid = model["id"]
-            if kid in self._kernels:
-                await self._kernels[kid].refresh_model(model)
-                kernel_models[kid] = model
-        # Remove any of our kernels that may have been culled on the gateway server
-        our_kernels = self._kernels.copy()
-        culled_ids = []
-        for kid in our_kernels:
-            if kid not in kernel_models:
-                # The upstream kernel was not reported in the list of kernels.
-                self.log.warning(
-                    f"Kernel {kid} not present in the list of kernels - possibly culled on Gateway server."
-                )
-                try:
-                    # Try to directly refresh the model for this specific kernel in case
-                    # the upstream list of kernels was erroneously incomplete.
-                    #
-                    # That might happen if the case of a proxy that manages multiple
-                    # backends where there could be transient connectivity issues with
-                    # a single backend.
-                    #
-                    # Alternatively, it could happen if there is simply a bug in the
-                    # upstream gateway server.
-                    #
-                    # Either way, including this check improves our reliability in the
-                    # face of such scenarios.
-                    model = await self._kernels[kid].refresh_model()
-                except web.HTTPError:
-                    model = None
-                if model:
-                    kernel_models[kid] = model
-                else:
-                    self.log.warning(
-                        f"Kernel {kid} no longer active - probably culled on Gateway server."
-                    )
-                    self._kernels.pop(kid, None)
-                    culled_ids.append(kid)  # TODO: Figure out what do with these.
-        return list(kernel_models.values())
+        pass
 
     async def shutdown_kernel(self, kernel_id, now=False, restart=False):
         """Shutdown a kernel by its kernel uuid.
@@ -172,9 +108,7 @@ class GatewayMappingKernelManager(AsyncMappingKernelManager):
         restart : bool
             The purpose of this shutdown is to restart the kernel (True)
         """
-        km = self.get_kernel(kernel_id)
-        await ensure_async(km.shutdown_kernel(now=now, restart=restart))
-        self.remove_kernel(kernel_id)
+        pass
 
     async def restart_kernel(self, kernel_id, now=False, **kwargs):
         """Restart a kernel by its kernel uuid.
@@ -231,25 +165,7 @@ class GatewayKernelSpecManager(KernelSpecManager):
         This enables clients to properly route through jupyter_server to a gateway
         for kernel resources such as logo files
         """
-        if not self.parent:
-            return {}
-        kernelspecs = kernel_specs["kernelspecs"]
-        for kernel_name in kernelspecs:
-            resources = kernelspecs[kernel_name]["resources"]
-            for resource_name in resources:
-                original_path = resources[resource_name]
-                split_eg_base_url = str.rsplit(original_path, sep="/kernelspecs/", maxsplit=1)
-                if len(split_eg_base_url) > 1:
-                    new_path = url_path_join(
-                        self.parent.base_url, "kernelspecs", split_eg_base_url[1]
-                    )
-                    kernel_specs["kernelspecs"][kernel_name]["resources"][resource_name] = new_path
-                    if original_path != new_path:
-                        self.log.debug(
-                            f"Replaced original kernel resource path {original_path} with new "
-                            f"path {kernel_specs['kernelspecs'][kernel_name]['resources'][resource_name]}"
-                        )
-        return kernel_specs
+        pass
 
     def _get_kernelspecs_endpoint_url(self, kernel_name=None):
         """Builds a url for the kernels endpoint
@@ -257,41 +173,15 @@ class GatewayKernelSpecManager(KernelSpecManager):
         ----------
         kernel_name : kernel name (optional)
         """
-        if kernel_name:
-            return url_path_join(self.base_endpoint, url_escape(kernel_name))
-
-        return self.base_endpoint
+        pass
 
     async def get_all_specs(self):
         """Get all of the kernel specs for the gateway."""
-        fetched_kspecs = await self.list_kernel_specs()
-
-        # get the default kernel name and compare to that of this server.
-        # If different log a warning and reset the default.  However, the
-        # caller of this method will still return this server's value until
-        # the next fetch of kernelspecs - at which time they'll match.
-        if not self.parent:
-            return {}
-        km = self.parent.kernel_manager
-        remote_default_kernel_name = fetched_kspecs.get("default")
-        if remote_default_kernel_name != km.default_kernel_name:
-            self.log.info(
-                f"Default kernel name on Gateway server ({remote_default_kernel_name}) differs from "
-                f"Notebook server ({km.default_kernel_name}).  Updating to Gateway server's value."
-            )
-            km.default_kernel_name = remote_default_kernel_name
-
-        remote_kspecs = fetched_kspecs.get("kernelspecs")
-        return remote_kspecs
+        pass
 
     async def list_kernel_specs(self):
         """Get a list of kernel specs."""
-        kernel_spec_url = self._get_kernelspecs_endpoint_url()
-        self.log.debug(f"Request list kernel specs at: {kernel_spec_url}")
-        response = await gateway_request(kernel_spec_url, method="GET")
-        kernel_specs = json_decode(response.body)
-        kernel_specs = self._replace_path_kernelspec_resources(kernel_specs)
-        return kernel_specs
+        pass
 
     async def get_kernel_spec(self, kernel_name, **kwargs):
         """Get kernel spec for kernel_name.
@@ -301,22 +191,7 @@ class GatewayKernelSpecManager(KernelSpecManager):
         kernel_name : str
             The name of the kernel.
         """
-        kernel_spec_url = self._get_kernelspecs_endpoint_url(kernel_name=str(kernel_name))
-        self.log.debug(f"Request kernel spec at: {kernel_spec_url}")
-        try:
-            response = await gateway_request(kernel_spec_url, method="GET")
-        except web.HTTPError as error:
-            if error.status_code == 404:
-                # Convert not found to KeyError since that's what the Notebook handler expects
-                # message is not used, but might as well make it useful for troubleshooting
-                msg = f"kernelspec {kernel_name} not found on Gateway server at: {GatewayClient.instance().url}"
-                raise KeyError(msg) from None
-            else:
-                raise
-        else:
-            kernel_spec = json_decode(response.body)
-
-        return kernel_spec
+        pass
 
     async def get_kernel_spec_resource(self, kernel_name, path):
         """Get kernel spec for kernel_name.
@@ -328,20 +203,7 @@ class GatewayKernelSpecManager(KernelSpecManager):
         path : str
             The name of the desired resource
         """
-        kernel_spec_resource_url = url_path_join(
-            self.base_resource_endpoint, str(kernel_name), str(path)
-        )
-        self.log.debug(f"Request kernel spec resource '{path}' at: {kernel_spec_resource_url}")
-        try:
-            response = await gateway_request(kernel_spec_resource_url, method="GET")
-        except web.HTTPError as error:
-            if error.status_code == 404:
-                kernel_spec_resource = None
-            else:
-                raise
-        else:
-            kernel_spec_resource = response.body
-        return kernel_spec_resource
+        pass
 
 
 class GatewaySessionManager(SessionManager):
@@ -351,20 +213,7 @@ class GatewaySessionManager(SessionManager):
 
     async def kernel_culled(self, kernel_id: str) -> bool:  # typing: ignore
         """Checks if the kernel is still considered alive and returns true if it's not found."""
-        km: Optional[GatewayKernelManager] = None
-        try:
-            # Since we keep the models up-to-date via client polling, use that state to determine
-            # if this kernel no longer exists on the gateway server rather than perform a redundant
-            # fetch operation - especially since this is called at approximately the same interval.
-            # This has the effect of reducing GET /api/kernels requests against the gateway server
-            # by 50%!
-            # Note that should the redundant polling be consolidated, or replaced with an event-based
-            # notification model, this will need to be revisited.
-            km = self.kernel_manager.get_kernel(kernel_id)
-        except Exception:
-            # Let exceptions here reflect culled kernel
-            pass
-        return km is None
+        pass
 
 
 class GatewayKernelManager(ServerKernelManager):
@@ -414,35 +263,7 @@ class GatewayKernelManager(ServerKernelManager):
             The model from which to refresh the kernel.  If None, the kernel
             model is fetched from the Gateway server.
         """
-        if model is None:
-            self.log.debug("Request kernel at: %s" % self.kernel_url)
-            try:
-                response = await gateway_request(self.kernel_url, method="GET")
-
-            except web.HTTPError as error:
-                if error.status_code == 404:
-                    self.log.warning("Kernel not found at: %s" % self.kernel_url)
-                    model = None
-                else:
-                    raise
-            else:
-                model = json_decode(response.body)
-            self.log.debug("Kernel retrieved: %s" % model)
-
-        if model:  # Update activity markers
-            self.last_activity = datetime.datetime.strptime(
-                model["last_activity"], "%Y-%m-%dT%H:%M:%S.%fZ"
-            ).replace(tzinfo=UTC)
-            self.execution_state = model["execution_state"]
-            if isinstance(self.parent, AsyncMappingKernelManager):
-                # Update connections only if there's a mapping kernel manager parent for
-                # this kernel manager.  The current kernel manager instance may not have
-                # a parent instance if, say, a server extension is using another application
-                # (e.g., papermill) that uses a KernelManager instance directly.
-                self.parent._kernel_connections[self.kernel_id] = int(model["connections"])  # type:ignore[index]
-
-        self.kernel = model
-        return model
+        pass
 
     # --------------------------------------------------------------------------
     # Kernel management
@@ -460,64 +281,14 @@ class GatewayKernelManager(ServerKernelManager):
              keyword arguments that are passed down to build the kernel_cmd
              and launching the kernel (e.g. Popen kwargs).
         """
-        kernel_id = kwargs.get("kernel_id")
-
-        if kernel_id is None:
-            kernel_name = kwargs.get("kernel_name", "python3")
-            self.log.debug("Request new kernel at: %s" % self.kernels_url)
-
-            # Let KERNEL_USERNAME take precedent over http_user config option.
-            if os.environ.get("KERNEL_USERNAME") is None and GatewayClient.instance().http_user:
-                os.environ["KERNEL_USERNAME"] = GatewayClient.instance().http_user or ""
-
-            payload_envs = os.environ.copy()
-            payload_envs.update(kwargs.get("env", {}))  # Add any env entries in this request
-
-            # Build the actual env payload, filtering allowed_envs and those starting with 'KERNEL_'
-            kernel_env = {
-                k: v
-                for (k, v) in payload_envs.items()
-                if k.startswith("KERNEL_") or k in GatewayClient.instance().allowed_envs.split(",")
-            }
-
-            # Convey the full path to where this notebook file is located.
-            if kwargs.get("cwd") is not None and kernel_env.get("KERNEL_WORKING_DIR") is None:
-                kernel_env["KERNEL_WORKING_DIR"] = kwargs["cwd"]
-
-            json_body = json_encode({"name": kernel_name, "env": kernel_env})
-
-            response = await gateway_request(
-                self.kernels_url,
-                method="POST",
-                headers={"Content-Type": "application/json"},
-                body=json_body,
-            )
-            self.kernel = json_decode(response.body)
-            self.kernel_id = self.kernel["id"]
-            self.kernel_url = url_path_join(self.kernels_url, url_escape(str(self.kernel_id)))
-            self.log.info(f"GatewayKernelManager started kernel: {self.kernel_id}, args: {kwargs}")
-        else:
-            self.kernel_id = kernel_id
-            self.kernel_url = url_path_join(self.kernels_url, url_escape(str(self.kernel_id)))
-            self.kernel = await self.refresh_model()
-            self.log.info(f"GatewayKernelManager using existing kernel: {self.kernel_id}")
+        pass
 
     @emit_kernel_action_event(
         success_msg="Kernel {kernel_id} was shutdown.",
     )
     async def shutdown_kernel(self, now=False, restart=False):
         """Attempts to stop the kernel process cleanly via HTTP."""
-
-        if self.has_kernel:
-            self.log.debug("Request shutdown kernel at: %s", self.kernel_url)
-            try:
-                response = await gateway_request(self.kernel_url, method="DELETE")
-                self.log.debug("Shutdown kernel response: %d %s", response.code, response.reason)
-            except web.HTTPError as error:
-                if error.status_code == 404:
-                    self.log.debug("Shutdown kernel response: kernel not found (ignored)")
-                else:
-                    raise
+        pass
 
     @emit_kernel_action_event(
         success_msg="Kernel {kernel_id} was restarted.",
@@ -535,14 +306,7 @@ class GatewayKernelManager(ServerKernelManager):
 
     async def is_alive(self):
         """Is the kernel process still running?"""
-        if self.has_kernel:
-            # Go ahead and issue a request to get the kernel
-            self.kernel = await self.refresh_model()
-            self.log.debug(f"The kernel: {self.kernel} is alive.")
-            return True
-        else:  # we don't have a kernel
-            self.log.debug(f"The kernel: {self.kernel} no longer exists.")
-            return False
+        pass
 
     def cleanup_resources(self, restart=False):
         """Clean up resources when the kernel is shut down"""
@@ -575,14 +339,7 @@ class ChannelQueue(Queue):  # type:ignore[type-arg]
 
     def send(self, msg: dict[str, Any]) -> None:
         """Send a message to the queue."""
-        message = json.dumps(msg, default=ChannelQueue.serialize_datetime).replace("</", "<\\/")
-        self.log.debug(
-            "Sending message on channel: %s, msg_id: %s, msg_type: %s",
-            self.channel_name,
-            msg["msg_id"],
-            msg["msg_type"] if msg else "null",
-        )
-        self.channel_socket.send(message)
+        pass
 
     @staticmethod
     def serialize_datetime(dt):
@@ -598,7 +355,7 @@ class ChannelQueue(Queue):  # type:ignore[type-arg]
 
     def is_alive(self) -> bool:
         """Whether the queue is alive."""
-        return self.channel_socket is not None
+        pass
 
 
 class HBChannelQueue(ChannelQueue):
