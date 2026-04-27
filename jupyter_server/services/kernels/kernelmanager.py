@@ -550,7 +550,6 @@ def emit_kernel_action_event(success_msg: str = "") -> t.Callable[..., t.Any]:
     """
 
     def wrap_method(method):
-        @wraps(method)
         pass
 
     return wrap_method
