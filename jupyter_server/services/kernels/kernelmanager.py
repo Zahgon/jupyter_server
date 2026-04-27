@@ -188,12 +188,7 @@ class MappingKernelManager(MultiKernelManager):
 
     def cwd_for_path(self, path, **kwargs):
         """Turn API path into absolute OS path."""
-        os_path = to_os_path(path, self.root_dir)
-        # in the case of documents and kernels not being on the same filesystem,
-        # walk up to root_dir if the paths don't exist
-        while not os.path.isdir(os_path) and os_path != self.root_dir:
-            os_path = os.path.dirname(os_path)
-        return os_path
+        pass
 
     async def _remove_kernel_when_ready(self, kernel_id, kernel_awaitable):
         """Remove a kernel when it is ready."""
@@ -242,13 +237,7 @@ class MappingKernelManager(MultiKernelManager):
         instance while ZMQChannelsHandler instances are per WebSocket connection that
         can vary per kernel lifetime.
         """
-        changed_ports = self._get_changed_ports(kernel_id)
-        if changed_ports:
-            # If changed, update captured ports and return True, else return False.
-            self.log.debug("Port change detected for kernel: %s", kernel_id)
-            self._kernel_ports[kernel_id] = changed_ports
-            return True
-        return False
+        pass
 
     def _get_changed_ports(self, kernel_id):
         """Internal method to test if a kernel's ports have changed and, if so, return their values.
@@ -258,13 +247,7 @@ class MappingKernelManager(MultiKernelManager):
         than those captured at startup.  This enables the ability to conditionally restart
         activity monitoring immediately following a kernel's restart (if ports have changed).
         """
-        # Get current ports and return comparison with ports captured at startup.
-        km = self.get_kernel(kernel_id)
-        assert isinstance(km.ports, list)
-        assert isinstance(self._kernel_ports[kernel_id], list)
-        if km.ports != self._kernel_ports[kernel_id]:
-            return km.ports
-        return None
+        pass
 
     def start_buffering(self, kernel_id, session_key, channels):
         """Start buffering messages for a kernel
@@ -280,29 +263,7 @@ class MappingKernelManager(MultiKernelManager):
         channels : dict({'channel': ZMQStream})
             The zmq channels whose messages should be buffered.
         """
-
-        if not self.buffer_offline_messages:
-            for stream in channels.values():
-                stream.close()
-            return
-
-        self.log.info("Starting buffering for %s", session_key)
-        self._check_kernel_id(kernel_id)
-        # clear previous buffering state
-        self.stop_buffering(kernel_id)
-        buffer_info = self._kernel_buffers[kernel_id]
-        # record the session key because only one session can buffer
-        buffer_info["session_key"] = session_key
-        # TODO: the buffer should likely be a memory bounded queue, we're starting with a list to keep it simple
-        buffer_info["buffer"] = []
-        buffer_info["channels"] = channels
-
-        # forward any future messages to the internal buffer
-        def buffer_msg(channel, msg_parts):
-            pass
-
-        for channel, stream in channels.items():
-            stream.on_recv(partial(buffer_msg, channel))
+        pass
 
     def get_buffer(self, kernel_id, session_key):
         """Get the buffer for a given kernel
@@ -316,18 +277,7 @@ class MappingKernelManager(MultiKernelManager):
             If the session_key matches the current buffered session_key,
             the buffer will be returned.
         """
-        self.log.debug("Getting buffer for %s", kernel_id)
-        if kernel_id not in self._kernel_buffers:
-            return None
-
-        buffer_info = self._kernel_buffers[kernel_id]
-        if buffer_info["session_key"] == session_key:
-            # remove buffer
-            self._kernel_buffers.pop(kernel_id)
-            # only return buffer_info if it's a match
-            return buffer_info
-        else:
-            self.stop_buffering(kernel_id)
+        pass
 
     def stop_buffering(self, kernel_id):
         """Stop buffering kernel messages
@@ -337,25 +287,7 @@ class MappingKernelManager(MultiKernelManager):
         kernel_id : str
             The id of the kernel to stop buffering.
         """
-        self.log.debug("Clearing buffer for %s", kernel_id)
-        self._check_kernel_id(kernel_id)
-
-        if kernel_id not in self._kernel_buffers:
-            return
-        buffer_info = self._kernel_buffers.pop(kernel_id)
-        # close buffering streams
-        for stream in buffer_info["channels"].values():
-            if not stream.socket.closed:
-                stream.on_recv(None)
-                stream.close()
-
-        msg_buffer = buffer_info["buffer"]
-        if msg_buffer:
-            self.log.info(
-                "Discarding %s buffered messages for %s",
-                len(msg_buffer),
-                buffer_info["session_key"],
-            )
+        pass
 
     async def _async_shutdown_kernel(self, kernel_id, now=False, restart=False):
         """Shutdown a kernel by kernel_id"""
@@ -371,51 +303,27 @@ class MappingKernelManager(MultiKernelManager):
 
     def notify_connect(self, kernel_id):
         """Notice a new connection to a kernel"""
-        if kernel_id in self._kernel_connections:
-            self._kernel_connections[kernel_id] += 1
+        pass
 
     def notify_disconnect(self, kernel_id):
         """Notice a disconnection from a kernel"""
-        if kernel_id in self._kernel_connections:
-            self._kernel_connections[kernel_id] -= 1
+        pass
 
     def kernel_model(self, kernel_id):
         """Return a JSON-safe dict representing a kernel
 
         For use in representing kernels in the JSON APIs.
         """
-        self._check_kernel_id(kernel_id)
-        kernel = self._kernels[kernel_id]
-
-        model = {
-            "id": kernel_id,
-            "name": kernel.kernel_name,
-            "last_activity": isoformat(kernel.last_activity),
-            "execution_state": kernel.execution_state,
-            "connections": self._kernel_connections.get(kernel_id, 0),
-        }
-        if getattr(kernel, "reason", None):
-            model["reason"] = kernel.reason
-        return model
+        pass
 
     def list_kernels(self):
         """Returns a list of kernel_id's of kernels running."""
-        kernels = []
-        kernel_ids = self.pinned_superclass.list_kernel_ids(self)
-        for kernel_id in kernel_ids:
-            try:
-                model = self.kernel_model(kernel_id)
-                kernels.append(model)
-            except (web.HTTPError, KeyError):
-                # Probably due to a (now) non-existent kernel, continue building the list
-                pass
-        return kernels
+        pass
 
     # override _check_kernel_id to raise 404 instead of KeyError
     def _check_kernel_id(self, kernel_id):
         """Check a that a kernel_id exists and raise 404 if not."""
-        if kernel_id not in self:
-            raise web.HTTPError(404, "Kernel does not exist: %s" % kernel_id)
+        pass
 
     # monitoring activity:
     untracked_message_types = List(
@@ -470,32 +378,7 @@ class MappingKernelManager(MultiKernelManager):
 
         Regardless of that value, set flag that we've been here.
         """
-        if (
-            not self._initialized_culler
-            and self.cull_idle_timeout > 0
-            and self._culler_callback is None
-        ):
-            _ = IOLoop.current()
-            if self.cull_interval <= 0:  # handle case where user set invalid value
-                self.log.warning(
-                    "Invalid value for 'cull_interval' detected (%s) - using default value (%s).",
-                    self.cull_interval,
-                    self.cull_interval_default,
-                )
-                self.cull_interval = self.cull_interval_default
-            self._culler_callback = PeriodicCallback(self.cull_kernels, 1000 * self.cull_interval)
-            self.log.info(
-                "Culling kernels with idle durations > %s seconds at %s second intervals ...",
-                self.cull_idle_timeout,
-                self.cull_interval,
-            )
-            if self.cull_busy:
-                self.log.info("Culling kernels even if busy")
-            if self.cull_connected:
-                self.log.info("Culling kernels even with connected clients")
-            self._culler_callback.start()
-
-        self._initialized_culler = True
+        pass
 
     async def cull_kernels(self):
         """Handle culling kernels."""
@@ -548,11 +431,7 @@ def emit_kernel_action_event(success_msg: str = "") -> t.Callable[..., t.Any]:
         a formatted string argument,
         e.g. "{kernel_id} failed to {action}."
     """
-
-    def wrap_method(method):
-        pass
-
-    return wrap_method
+    pass
 
 
 class ServerKernelManager(AsyncIOLoopKernelManager):
@@ -592,21 +471,21 @@ class ServerKernelManager(AsyncIOLoopKernelManager):
 
     def emit(self, schema_id, data):
         """Emit an event from the kernel manager."""
-        self.event_logger.emit(schema_id=schema_id, data=data)
+        pass
 
     @override
     @emit_kernel_action_event(
         success_msg="Kernel {kernel_id} was started.",
     )
     async def start_kernel(self, *args, **kwargs):
-        return await super().start_kernel(*args, **kwargs)
+        pass
 
     @override
     @emit_kernel_action_event(
         success_msg="Kernel {kernel_id} was shutdown.",
     )
     async def shutdown_kernel(self, *args, **kwargs):
-        return await super().shutdown_kernel(*args, **kwargs)
+        pass
 
     @override
     @emit_kernel_action_event(

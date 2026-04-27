@@ -42,6 +42,10 @@ def authorized(
         a message for the unauthorized action.
     """
     pass
+
+
+def allow_unauthenticated(method: FuncT) -> FuncT:
+    """A decorator for tornado.web.RequestHandler methods
     that allows any user to make the following request.
 
     Selectively disables the 'authentication' layer of REST API which
