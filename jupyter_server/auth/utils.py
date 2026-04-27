@@ -10,11 +10,7 @@ import warnings
 
 def warn_disabled_authorization():
     """DEPRECATED, does nothing"""
-    warnings.warn(
-        "jupyter_server.auth.utils.warn_disabled_authorization is deprecated",
-        DeprecationWarning,
-        stacklevel=2,
-    )
+    pass
 
 
 HTTP_METHOD_TO_AUTH_ACTION = {

@@ -169,26 +169,12 @@ def check_version(v: str, check: str) -> bool:
 
 
 def _check_pid_win32(pid: int) -> bool:
-    import ctypes
-
-    # OpenProcess returns 0 if no such process (of ours) exists
-    # positive int otherwise
-    return bool(ctypes.windll.kernel32.OpenProcess(1, 0, pid))  # type:ignore[attr-defined]
+    pass
 
 
 def _check_pid_posix(pid: int) -> bool:
     """Copy of IPython.utils.process.check_pid"""
-    try:
-        os.kill(pid, 0)
-    except OSError as err:
-        if err.errno == errno.ESRCH:
-            return False
-        elif err.errno == errno.EPERM:
-            # Don't have permission to signal the process - probably means it exists
-            return True
-        raise
-    else:
-        return True
+    pass
 
 
 if sys.platform == "win32":
@@ -278,7 +264,7 @@ def _request_for_tornado_client(
                 self.resolver.close()
 
             async def resolve(self, host, port, *args, **kwargs):
-                return [(socket.AF_UNIX, urldecode_unix_socket_path(host))]
+                pass
 
         resolver = UnixSocketResolver(resolver=Resolver())
         AsyncHTTPClient.configure(None, resolver=resolver)

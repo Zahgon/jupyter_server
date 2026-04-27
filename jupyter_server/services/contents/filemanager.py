@@ -78,53 +78,24 @@ class FileContentsManager(FileManagerMixin, ContentsManager):
 
     @default("root_dir")
     def _default_root_dir(self):
-        if not self.parent:
-            return os.getcwd()
-        return self.parent.root_dir
+        pass
 
     @validate("root_dir")
     def _validate_root_dir(self, proposal):
-        value = proposal["value"]
-        if not os.path.isabs(value):
-            # If we receive a non-absolute path, make it absolute.
-            value = os.path.abspath(value)
-        if not os.path.isdir(value):
-            raise TraitError("%r is not a directory" % value)
-        return value
+        pass
 
     @default("preferred_dir")
     def _default_preferred_dir(self):
-        if not self.parent:
-            return ""
-        try:
-            value = self.parent.preferred_dir
-            if value == self.parent.root_dir:
-                value = None
-        except AttributeError:
-            pass
-        else:
-            if value is not None:
-                warnings.warn(
-                    "ServerApp.preferred_dir config is deprecated in jupyter-server 2.0. Use FileContentsManager.preferred_dir instead",
-                    FutureWarning,
-                    stacklevel=3,
-                )
-                try:
-                    path = Path(value)
-                    return path.relative_to(self.root_dir).as_posix()
-                except ValueError:
-                    raise TraitError("%s is outside root contents directory" % value) from None
-        return ""
+        pass
 
     @validate("preferred_dir")
     def _validate_preferred_dir(self, proposal):
         # It should be safe to pass an API path through this method:
-        proposal["value"] = to_api_path(proposal["value"], self.root_dir)
-        return super()._validate_preferred_dir(proposal)
+        pass
 
     @default("checkpoints_class")
     def _checkpoints_class_default(self):
-        return FileCheckpoints
+        pass
 
     delete_to_trash = Bool(
         True,
@@ -146,11 +117,11 @@ class FileContentsManager(FileManagerMixin, ContentsManager):
 
     @default("files_handler_class")
     def _files_handler_class_default(self):
-        return AuthenticatedFileHandler
+        pass
 
     @default("files_handler_params")
     def _files_handler_params_default(self):
-        return {"path": self.root_dir}
+        pass
 
     def is_hidden(self, path):
         """Does the API style path correspond to a hidden directory or file?
@@ -555,53 +526,7 @@ class FileContentsManager(FileManagerMixin, ContentsManager):
 
     def delete_file(self, path):
         """Delete file at path."""
-        path = path.strip("/")
-        os_path = self._get_os_path(path)
-        rm = os.unlink
-
-        if not self.allow_hidden and is_hidden(os_path, self.root_dir):
-            raise web.HTTPError(400, f"Cannot delete file or directory {os_path!r}")
-
-        four_o_four = "file or directory does not exist: %r" % path
-        if not self.exists(path):
-            raise web.HTTPError(404, four_o_four)
-
-        def is_non_empty_dir(os_path):
-            if os.path.isdir(os_path):
-                # A directory containing only leftover checkpoints is
-                # considered empty.
-                cp_dir = getattr(self.checkpoints, "checkpoint_dir", None)
-                if set(os.listdir(os_path)) - {cp_dir}:
-                    return True
-
-            return False
-
-        if self.delete_to_trash:
-            if not self.always_delete_dir and sys.platform == "win32" and is_non_empty_dir(os_path):
-                # send2trash can really delete files on Windows, so disallow
-                # deleting non-empty files. See Github issue 3631.
-                raise web.HTTPError(400, "Directory %s not empty" % os_path)
-            # send2trash now supports deleting directories. see #1290
-            if not self.is_writable(path):
-                raise web.HTTPError(403, "Permission denied: %s" % path) from None
-            self.log.debug("Sending %s to trash", os_path)
-            try:
-                send2trash(os_path)
-            except OSError as e:
-                raise web.HTTPError(400, "send2trash failed: %s" % e) from e
-            return
-
-        if os.path.isdir(os_path):
-            # Don't permanently delete non-empty directories.
-            if not self.always_delete_dir and is_non_empty_dir(os_path):
-                raise web.HTTPError(400, "Directory %s not empty" % os_path)
-            self.log.debug("Removing directory %s", os_path)
-            with self.perm_to_403():
-                shutil.rmtree(os_path)
-        else:
-            self.log.debug("Unlinking file %s", os_path)
-            with self.perm_to_403():
-                rm(os_path)
+        pass
 
     def rename_file(self, old_path, new_path):
         """Rename a file."""
@@ -773,7 +698,7 @@ class AsyncFileContentsManager(FileContentsManager, AsyncFileManagerMixin, Async
 
     @default("checkpoints_class")
     def _checkpoints_class_default(self):
-        return AsyncFileCheckpoints
+        pass
 
     async def _dir_model(self, path, content=True):
         """Build a model for a directory
@@ -1020,57 +945,7 @@ class AsyncFileContentsManager(FileContentsManager, AsyncFileManagerMixin, Async
 
     async def delete_file(self, path):
         """Delete file at path."""
-        path = path.strip("/")
-        os_path = self._get_os_path(path)
-        rm = os.unlink
-
-        if not self.allow_hidden and is_hidden(os_path, self.root_dir):
-            raise web.HTTPError(400, f"Cannot delete file or directory {os_path!r}")
-
-        if not os.path.exists(os_path):
-            raise web.HTTPError(404, "File or directory does not exist: %s" % os_path)
-
-        async def is_non_empty_dir(os_path):
-            if os.path.isdir(os_path):
-                # A directory containing only leftover checkpoints is
-                # considered empty.
-                cp_dir = getattr(self.checkpoints, "checkpoint_dir", None)
-                dir_contents = set(await run_sync(os.listdir, os_path))
-                if dir_contents - {cp_dir}:
-                    return True
-
-            return False
-
-        if self.delete_to_trash:
-            if (
-                not self.always_delete_dir
-                and sys.platform == "win32"
-                and await is_non_empty_dir(os_path)
-            ):
-                # send2trash can really delete files on Windows, so disallow
-                # deleting non-empty files. See Github issue 3631.
-                raise web.HTTPError(400, "Directory %s not empty" % os_path)
-            # send2trash now supports deleting directories. see #1290
-            if not self.is_writable(path):
-                raise web.HTTPError(403, "Permission denied: %s" % path) from None
-            self.log.debug("Sending %s to trash", os_path)
-            try:
-                send2trash(os_path)
-            except OSError as e:
-                raise web.HTTPError(400, "send2trash failed: %s" % e) from e
-            return
-
-        if os.path.isdir(os_path):
-            # Don't permanently delete non-empty directories.
-            if not self.always_delete_dir and await is_non_empty_dir(os_path):
-                raise web.HTTPError(400, "Directory %s not empty" % os_path)
-            self.log.debug("Removing directory %s", os_path)
-            with self.perm_to_403():
-                await run_sync(shutil.rmtree, os_path)
-        else:
-            self.log.debug("Unlinking file %s", os_path)
-            with self.perm_to_403():
-                await run_sync(rm, os_path)
+        pass
 
     async def rename_file(self, old_path, new_path):
         """Rename a file."""

@@ -98,16 +98,7 @@ class GatewayClient(SingletonConfigurable):
 
     @default("event_logger")
     def _default_event_logger(self):
-        if self.parent and hasattr(self.parent, "event_logger"):
-            # Event logger is attached from serverapp.
-            return self.parent.event_logger
-        else:
-            # If parent does not have an event logger, create one.
-            logger = EventLogger()
-            schema_path = DEFAULT_EVENTS_SCHEMA_PATH / "gateway_client" / "v1.yaml"
-            logger.register_event_schema(schema_path)
-            self.log.info("Event is registered in GatewayClient.")
-            return logger
+        pass
 
     def emit(self, data):
         """Emit event using the core event schema from Jupyter Server's Gateway Client."""
@@ -128,17 +119,11 @@ management and kernel specification retrieval.  (JUPYTER_GATEWAY_URL env var)
 
     @default("url")
     def _url_default(self):
-        return os.environ.get(self.url_env)
+        pass
 
     @validate("url")
     def _url_validate(self, proposal):
-        value = proposal["value"]
-        # Ensure value, if present, starts with 'http'
-        if value is not None and len(value) > 0 and not str(value).lower().startswith("http"):
-            message = "GatewayClient url must start with 'http': '%r'" % value
-            self.emit(data={STATUS_KEY: ERROR_STATUS, STATUS_CODE_KEY: 400, MESSAGE_KEY: message})
-            raise TraitError(message)
-        return value
+        pass
 
     ws_url = Unicode(
         default_value=None,
@@ -153,20 +138,11 @@ will correspond to the value of the Gateway url with 'ws' in place of 'http'.  (
 
     @default("ws_url")
     def _ws_url_default(self):
-        default_value = os.environ.get(self.ws_url_env)
-        if self.url is not None and default_value is None and self.gateway_enabled:
-            default_value = self.url.lower().replace("http", "ws")
-        return default_value
+        pass
 
     @validate("ws_url")
     def _ws_url_validate(self, proposal):
-        value = proposal["value"]
-        # Ensure value, if present, starts with 'ws'
-        if value is not None and len(value) > 0 and not str(value).lower().startswith("ws"):
-            message = "GatewayClient ws_url must start with 'ws': '%r'" % value
-            self.emit(data={STATUS_KEY: ERROR_STATUS, STATUS_CODE_KEY: 400, MESSAGE_KEY: message})
-            raise TraitError(message)
-        return value
+        pass
 
     kernels_endpoint_default_value = "/api/kernels"
     kernels_endpoint_env = "JUPYTER_GATEWAY_KERNELS_ENDPOINT"
@@ -178,7 +154,7 @@ will correspond to the value of the Gateway url with 'ws' in place of 'http'.  (
 
     @default("kernels_endpoint")
     def _kernels_endpoint_default(self):
-        return os.environ.get(self.kernels_endpoint_env, self.kernels_endpoint_default_value)
+        pass
 
     kernelspecs_endpoint_default_value = "/api/kernelspecs"
     kernelspecs_endpoint_env = "JUPYTER_GATEWAY_KERNELSPECS_ENDPOINT"
@@ -190,9 +166,7 @@ will correspond to the value of the Gateway url with 'ws' in place of 'http'.  (
 
     @default("kernelspecs_endpoint")
     def _kernelspecs_endpoint_default(self):
-        return os.environ.get(
-            self.kernelspecs_endpoint_env, self.kernelspecs_endpoint_default_value
-        )
+        pass
 
     kernelspecs_resource_endpoint_default_value = "/kernelspecs"
     kernelspecs_resource_endpoint_env = "JUPYTER_GATEWAY_KERNELSPECS_RESOURCE_ENDPOINT"
@@ -205,10 +179,7 @@ will correspond to the value of the Gateway url with 'ws' in place of 'http'.  (
 
     @default("kernelspecs_resource_endpoint")
     def _kernelspecs_resource_endpoint_default(self):
-        return os.environ.get(
-            self.kernelspecs_resource_endpoint_env,
-            self.kernelspecs_resource_endpoint_default_value,
-        )
+        pass
 
     connect_timeout_default_value = 40.0
     connect_timeout_env = "JUPYTER_GATEWAY_CONNECT_TIMEOUT"
@@ -221,7 +192,7 @@ will correspond to the value of the Gateway url with 'ws' in place of 'http'.  (
 
     @default("connect_timeout")
     def _connect_timeout_default(self):
-        return float(os.environ.get(self.connect_timeout_env, self.connect_timeout_default_value))
+        pass
 
     request_timeout_default_value = 42.0
     request_timeout_env = "JUPYTER_GATEWAY_REQUEST_TIMEOUT"
@@ -233,7 +204,7 @@ will correspond to the value of the Gateway url with 'ws' in place of 'http'.  (
 
     @default("request_timeout")
     def _request_timeout_default(self):
-        return float(os.environ.get(self.request_timeout_env, self.request_timeout_default_value))
+        pass
 
     client_key = Unicode(
         default_value=None,
@@ -246,7 +217,7 @@ will correspond to the value of the Gateway url with 'ws' in place of 'http'.  (
 
     @default("client_key")
     def _client_key_default(self):
-        return os.environ.get(self.client_key_env)
+        pass
 
     client_cert = Unicode(
         default_value=None,
@@ -259,7 +230,7 @@ will correspond to the value of the Gateway url with 'ws' in place of 'http'.  (
 
     @default("client_cert")
     def _client_cert_default(self):
-        return os.environ.get(self.client_cert_env)
+        pass
 
     ca_certs = Unicode(
         default_value=None,
@@ -272,7 +243,7 @@ will correspond to the value of the Gateway url with 'ws' in place of 'http'.  (
 
     @default("ca_certs")
     def _ca_certs_default(self):
-        return os.environ.get(self.ca_certs_env)
+        pass
 
     http_user = Unicode(
         default_value=None,
@@ -285,7 +256,7 @@ will correspond to the value of the Gateway url with 'ws' in place of 'http'.  (
 
     @default("http_user")
     def _http_user_default(self):
-        return os.environ.get(self.http_user_env)
+        pass
 
     http_pwd = Unicode(
         default_value=None,
@@ -298,7 +269,7 @@ will correspond to the value of the Gateway url with 'ws' in place of 'http'.  (
 
     @default("http_pwd")
     def _http_pwd_default(self):
-        return os.environ.get(self.http_pwd_env)
+        pass
 
     headers_default_value = "{}"
     headers_env = "JUPYTER_GATEWAY_HEADERS"
@@ -313,7 +284,7 @@ will correspond to the value of the Gateway url with 'ws' in place of 'http'.  (
 
     @default("headers")
     def _headers_default(self):
-        return os.environ.get(self.headers_env, self.headers_default_value)
+        pass
 
     auth_header_key_default_value = "Authorization"
     auth_header_key = Unicode(
@@ -332,7 +303,7 @@ If the authorization header key takes a single value, `auth_scheme` should be se
 
     @default("auth_header_key")
     def _auth_header_key_default(self):
-        return os.environ.get(self.auth_header_key_env, self.auth_header_key_default_value)
+        pass
 
     auth_token_default_value = ""
     auth_token = Unicode(
@@ -349,7 +320,7 @@ If the authorization header key takes a single value, `auth_scheme` should be se
 
     @default("auth_token")
     def _auth_token_default(self):
-        return os.environ.get(self.auth_token_env, self.auth_token_default_value)
+        pass
 
     auth_scheme_default_value = "token"  # This value is purely for backwards compatibility
     auth_scheme = Unicode(
@@ -362,7 +333,7 @@ If the authorization header key takes a single value, `auth_scheme` should be se
 
     @default("auth_scheme")
     def _auth_scheme_default(self):
-        return os.environ.get(self.auth_scheme_env, self.auth_scheme_default_value)
+        pass
 
     validate_cert_default_value = True
     validate_cert_env = "JUPYTER_GATEWAY_VALIDATE_CERT"
@@ -375,10 +346,7 @@ If the authorization header key takes a single value, `auth_scheme` should be se
 
     @default("validate_cert")
     def _validate_cert_default(self):
-        return bool(
-            os.environ.get(self.validate_cert_env, str(self.validate_cert_default_value))
-            not in ["no", "false"]
-        )
+        pass
 
     allowed_envs_default_value = ""
     allowed_envs_env = "JUPYTER_GATEWAY_ALLOWED_ENVS"
@@ -393,10 +361,7 @@ environmental values to make available to the kernel. (JUPYTER_GATEWAY_ALLOWED_E
 
     @default("allowed_envs")
     def _allowed_envs_default(self):
-        return os.environ.get(
-            self.allowed_envs_env,
-            os.environ.get("JUPYTER_GATEWAY_ENV_WHITELIST", self.allowed_envs_default_value),
-        )
+        pass
 
     env_whitelist = Unicode(
         default_value=allowed_envs_default_value,
@@ -417,12 +382,7 @@ but less than JUPYTER_GATEWAY_RETRY_INTERVAL_MAX.
 
     @default("gateway_retry_interval")
     def _gateway_retry_interval_default(self):
-        return float(
-            os.environ.get(
-                self.gateway_retry_interval_env,
-                self.gateway_retry_interval_default_value,
-            )
-        )
+        pass
 
     gateway_retry_interval_max_default_value = 30.0
     gateway_retry_interval_max_env = "JUPYTER_GATEWAY_RETRY_INTERVAL_MAX"
@@ -435,12 +395,7 @@ but less than JUPYTER_GATEWAY_RETRY_INTERVAL_MAX.
 
     @default("gateway_retry_interval_max")
     def _gateway_retry_interval_max_default(self):
-        return float(
-            os.environ.get(
-                self.gateway_retry_interval_max_env,
-                self.gateway_retry_interval_max_default_value,
-            )
-        )
+        pass
 
     gateway_retry_max_default_value = 5
     gateway_retry_max_env = "JUPYTER_GATEWAY_RETRY_MAX"
@@ -453,7 +408,7 @@ but less than JUPYTER_GATEWAY_RETRY_INTERVAL_MAX.
 
     @default("gateway_retry_max")
     def _gateway_retry_max_default(self):
-        return int(os.environ.get(self.gateway_retry_max_env, self.gateway_retry_max_default_value))
+        pass
 
     gateway_token_renewer_class_default_value = (
         "jupyter_server.gateway.gateway_client.NoOpTokenRenewer"  # noqa: S105
@@ -467,9 +422,7 @@ but less than JUPYTER_GATEWAY_RETRY_INTERVAL_MAX.
 
     @default("gateway_token_renewer_class")
     def _gateway_token_renewer_class_default(self):
-        return os.environ.get(
-            self.gateway_token_renewer_class_env, self.gateway_token_renewer_class_default_value
-        )
+        pass
 
     launch_timeout_pad_default_value = 2.0
     launch_timeout_pad_env = "JUPYTER_GATEWAY_LAUNCH_TIMEOUT_PAD"
@@ -483,12 +436,7 @@ such that request_timeout >= KERNEL_LAUNCH_TIMEOUT + launch_timeout_pad.
 
     @default("launch_timeout_pad")
     def _launch_timeout_pad_default(self):
-        return float(
-            os.environ.get(
-                self.launch_timeout_pad_env,
-                self.launch_timeout_pad_default_value,
-            )
-        )
+        pass
 
     accept_cookies_value = False
     accept_cookies_env = "JUPYTER_GATEWAY_ACCEPT_COOKIES"
@@ -502,10 +450,7 @@ such that request_timeout >= KERNEL_LAUNCH_TIMEOUT + launch_timeout_pad.
 
     @default("accept_cookies")
     def _accept_cookies_default(self):
-        return bool(
-            os.environ.get(self.accept_cookies_env, str(self.accept_cookies_value).lower())
-            not in ["no", "false"]
-        )
+        pass
 
     _deprecated_traits = {
         "env_whitelist": ("allowed_envs", "2.0"),
@@ -516,22 +461,11 @@ such that request_timeout >= KERNEL_LAUNCH_TIMEOUT + launch_timeout_pad.
     @observe(*list(_deprecated_traits))
     def _deprecated_trait(self, change):
         """observer for deprecated traits"""
-        old_attr = change.name
-        new_attr, version = self._deprecated_traits[old_attr]
-        new_value = getattr(self, new_attr)
-        if new_value != change.new:
-            # only warn if different
-            # protects backward-compatible config from warnings
-            # if they set the same value under both names
-            self.log.warning(
-                f"{self.__class__.__name__}.{old_attr} is deprecated in jupyter_server "
-                f"{version}, use {self.__class__.__name__}.{new_attr} instead"
-            )
-            setattr(self, new_attr, change.new)
+        pass
 
     @property
     def gateway_enabled(self):
-        return bool(self.url is not None and len(self.url) > 0)
+        pass
 
     # Ensure KERNEL_LAUNCH_TIMEOUT has a default value.
     KERNEL_LAUNCH_TIMEOUT = int(os.environ.get("KERNEL_LAUNCH_TIMEOUT", "40"))

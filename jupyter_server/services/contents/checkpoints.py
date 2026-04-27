@@ -48,8 +48,7 @@ class Checkpoints(LoggingConfigurable):
 
     def delete_all_checkpoints(self, path):
         """Delete all checkpoints for the given path."""
-        for checkpoint in self.list_checkpoints(path):
-            self.delete_checkpoint(checkpoint["id"], path)
+        pass
 
 
 class GenericCheckpointsMixin:
@@ -93,14 +92,7 @@ class GenericCheckpointsMixin:
 
     def restore_checkpoint(self, contents_mgr, checkpoint_id, path):
         """Restore a checkpoint."""
-        type_ = contents_mgr.get(path, content=False)["type"]
-        if type_ == "notebook":
-            model = self.get_notebook_checkpoint(checkpoint_id, path)
-        elif type_ == "file":
-            model = self.get_file_checkpoint(checkpoint_id, path)
-        else:
-            raise HTTPError(500, "Unexpected type %s" % type_)
-        contents_mgr.save(model, path)
+        pass
 
     # Required Methods
     def create_file_checkpoint(self, content, format, path):
@@ -175,8 +167,7 @@ class AsyncCheckpoints(Checkpoints):
 
     async def delete_all_checkpoints(self, path):
         """Delete all checkpoints for the given path."""
-        for checkpoint in await self.list_checkpoints(path):
-            await self.delete_checkpoint(checkpoint["id"], path)
+        pass
 
 
 class AsyncGenericCheckpointsMixin(GenericCheckpointsMixin):
@@ -204,15 +195,7 @@ class AsyncGenericCheckpointsMixin(GenericCheckpointsMixin):
 
     async def restore_checkpoint(self, contents_mgr, checkpoint_id, path):
         """Restore a checkpoint."""
-        content_model = await contents_mgr.get(path, content=False)
-        type_ = content_model["type"]
-        if type_ == "notebook":
-            model = await self.get_notebook_checkpoint(checkpoint_id, path)
-        elif type_ == "file":
-            model = await self.get_file_checkpoint(checkpoint_id, path)
-        else:
-            raise HTTPError(500, "Unexpected type %s" % type_)
-        await contents_mgr.save(model, path)
+        pass
 
     # Required Methods
     async def create_file_checkpoint(self, content, format, path):

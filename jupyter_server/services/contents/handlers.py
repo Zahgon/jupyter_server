@@ -260,33 +260,7 @@ class ContentsHandler(ContentsAPIHandler):
           with body {"copy_from" : "/path/to/OtherNotebook.ipynb"}
           New copy of OtherNotebook in path
         """
-
-        cm = self.contents_manager
-
-        file_exists = await ensure_async(cm.file_exists(path))
-        if file_exists:
-            raise web.HTTPError(400, "Cannot POST to files, use PUT instead.")
-
-        model = self.get_json_body()
-        if model:
-            copy_from = model.get("copy_from")
-            if copy_from:
-                if not cm.allow_hidden and (
-                    await ensure_async(cm.is_hidden(path))
-                    or await ensure_async(cm.is_hidden(copy_from))
-                ):
-                    raise web.HTTPError(400, f"Cannot copy file or directory {path!r}")
-                else:
-                    await self._copy(copy_from, path)
-            else:
-                ext = model.get("ext", "")
-                type = model.get("type", "")
-                if type not in {None, "", "directory", "file", "notebook"}:
-                    # fall back to file if unknown type
-                    type = "file"
-                await self._new_untitled(path, type=type, ext=ext)
-        else:
-            await self._new_untitled(path)
+        pass
 
     @web.authenticated
     @authorized
@@ -328,15 +302,7 @@ class ContentsHandler(ContentsAPIHandler):
     @authorized
     async def delete(self, path=""):
         """delete a file in the given path"""
-        cm = self.contents_manager
-
-        if not cm.allow_hidden and await ensure_async(cm.is_hidden(path)):
-            raise web.HTTPError(400, f"Cannot delete file or directory {path!r}")
-
-        self.log.warning("delete %s", path)
-        await ensure_async(cm.delete(path))
-        self.set_status(204)
-        self.finish()
+        pass
 
 
 class CheckpointsHandler(ContentsAPIHandler):
@@ -355,19 +321,7 @@ class CheckpointsHandler(ContentsAPIHandler):
     @authorized
     async def post(self, path=""):
         """post creates a new checkpoint"""
-        cm = self.contents_manager
-        checkpoint = await ensure_async(cm.create_checkpoint(path))
-        data = json.dumps(checkpoint, default=json_default)
-        location = url_path_join(
-            self.base_url,
-            "api/contents",
-            url_escape(path),
-            "checkpoints",
-            url_escape(checkpoint["id"]),
-        )
-        self.set_header("Location", location)
-        self.set_status(201)
-        self.finish(data)
+        pass
 
 
 class ModifyCheckpointsHandler(ContentsAPIHandler):
@@ -377,19 +331,13 @@ class ModifyCheckpointsHandler(ContentsAPIHandler):
     @authorized
     async def post(self, path, checkpoint_id):
         """post restores a file from a checkpoint"""
-        cm = self.contents_manager
-        await ensure_async(cm.restore_checkpoint(checkpoint_id, path))
-        self.set_status(204)
-        self.finish()
+        pass
 
     @web.authenticated
     @authorized
     async def delete(self, path, checkpoint_id):
         """delete clears a checkpoint for a given file"""
-        cm = self.contents_manager
-        await ensure_async(cm.delete_checkpoint(checkpoint_id, path))
-        self.set_status(204)
-        self.finish()
+        pass
 
 
 class NotebooksRedirectHandler(JupyterHandler):
@@ -419,10 +367,7 @@ class TrustNotebooksHandler(JupyterHandler):
     @authorized(resource=AUTH_RESOURCE)
     async def post(self, path=""):
         """Trust a notebook by path."""
-        cm = self.contents_manager
-        await ensure_async(cm.trust_notebook(path))
-        self.set_status(201)
-        self.finish()
+        pass
 
 
 # -----------------------------------------------------------------------------

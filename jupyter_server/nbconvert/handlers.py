@@ -29,10 +29,7 @@ else:
 
 def find_resource_files(output_files_dir):
     """Find the resource files in a directory."""
-    files = []
-    for dirpath, _, filenames in os.walk(output_files_dir):
-        files.extend([os.path.join(dirpath, f) for f in filenames])
-    return files
+    pass
 
 
 def respond_zip(handler, name, output, resources):
@@ -165,34 +162,7 @@ class NbconvertPostHandler(JupyterHandler):
     @authorized
     async def post(self, format):
         """Convert a notebook file to a desired format."""
-        exporter = get_exporter(format, config=self.config)
-
-        model = self.get_json_body()
-        assert model is not None
-        name = model.get("name", "notebook.ipynb")
-        nbnode = from_dict(model["content"])
-
-        try:
-            output, resources = await run_sync(
-                lambda: exporter.from_notebook_node(
-                    nbnode,
-                    resources={
-                        "metadata": {"name": name[: name.rfind(".")]},
-                        "config_dir": self.application.settings["config_dir"],
-                    },
-                )
-            )
-        except Exception as e:
-            raise web.HTTPError(500, "nbconvert failed: %s" % e) from e
-
-        if respond_zip(self, name, output, resources):
-            return
-
-        # MIME type
-        if exporter.output_mimetype:
-            self.set_header("Content-Type", "%s; charset=utf-8" % exporter.output_mimetype)
-
-        self.finish(output)
+        pass
 
 
 # -----------------------------------------------------------------------------

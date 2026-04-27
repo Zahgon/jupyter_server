@@ -134,11 +134,11 @@ class BaseExtensionApp(JupyterApp):
 
     def _log_format_default(self) -> str:
         """A default format for messages"""
-        return "%(message)s"
+        pass
 
     @property
     def config_dir(self) -> str:  # type:ignore[override]
-        return _get_config_dir(user=self.user, sys_prefix=self.sys_prefix)
+        pass
 
 
 # Constants for pretty print extension listing function.

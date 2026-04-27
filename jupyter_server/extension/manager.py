@@ -29,31 +29,12 @@ class ExtensionPoint(HasTraits):
 
     @default("log")
     def _default_log(self):
-        return logging.getLogger("ExtensionPoint")
+        pass
 
     @validate_trait("metadata")
     def _valid_metadata(self, proposed):
         """Validate metadata."""
-        metadata = proposed["value"]
-        # Verify that the metadata has a "name" key.
-        try:
-            self._module_name = metadata["module"]
-        except KeyError:
-            msg = "There is no 'module' key in the extension's metadata packet."
-            raise ExtensionMetadataError(msg) from None
-
-        try:
-            self._module = importlib.import_module(self._module_name)
-        except ImportError:
-            msg = (
-                f"The submodule '{self._module_name}' could not be found. Are you "
-                "sure the extension is installed?"
-            )
-            raise ExtensionModuleNotFound(msg) from None
-        # If the metadata includes an ExtensionApp, create an instance.
-        if "app" in metadata:
-            self._app = metadata["app"]()
-        return metadata
+        pass
 
     @property
     def linked(self):
@@ -62,31 +43,24 @@ class ExtensionPoint(HasTraits):
         Will pull from ExtensionApp's trait, if this point
         is an instance of ExtensionApp.
         """
-        if self.app:
-            return self.app._linked
-        return self._linked
+        pass
 
     @property
     def app(self):
         """If the metadata includes an `app` field"""
-        return self._app
+        pass
 
     @property
     def config(self):
         """Return any configuration provided by this extension point."""
-        if self.app:
-            return self.app._jupyter_server_config()
-        # At some point, we might want to add logic to load config from
-        # disk when extensions don't use ExtensionApp.
-        else:
-            return {}
+        pass
 
     @property
     def module_name(self):
         """Name of the Python package module where the extension's
         _load_jupyter_server_extension can be found.
         """
-        return self._module_name
+        pass
 
     @property
     def name(self):
@@ -95,14 +69,12 @@ class ExtensionPoint(HasTraits):
         If it's not provided in the metadata, `name` is set
         to the extensions' module name.
         """
-        if self.app:
-            return self.app.name
-        return self.metadata.get("name", self.module_name)
+        pass
 
     @property
     def module(self):
         """The imported module (using importlib.import_module)"""
-        return self._module
+        pass
 
     def _get_linker(self):
         """Get a linker."""
@@ -133,7 +105,7 @@ class ExtensionPoint(HasTraits):
         else:
 
             async def _noop_start(serverapp):
-                return
+                pass
 
             linker = getattr(
                 self.module,
@@ -208,9 +180,7 @@ class ExtensionPackage(LoggingConfigurable):
 
     @default("version")
     def _load_version(self):
-        if not self.enabled:
-            return ""
-        return getattr(self.module, "__version__", "")
+        pass
 
     def __init__(self, **kwargs):
         """Initialize an extension package."""
@@ -223,20 +193,7 @@ class ExtensionPackage(LoggingConfigurable):
 
         Only used if extension package is enabled
         """
-        name = self.name
-        try:
-            self.module, self.metadata = get_metadata(name, logger=self.log)
-        except ImportError as e:
-            msg = (
-                f"The module '{name}' could not be found ({e}). Are you "
-                "sure the extension is installed?"
-            )
-            raise ExtensionModuleNotFound(msg) from None
-        # Create extension point interfaces for each extension path.
-        for m in self.metadata:
-            point = ExtensionPoint(metadata=m, log=self.log)
-            self.extension_points[point.name] = point
-        return name
+        pass
 
     def validate(self):
         """Validate all extension points in this package."""
@@ -256,8 +213,7 @@ class ExtensionPackage(LoggingConfigurable):
 
     async def start_point(self, point_name, serverapp):
         """Load an extension point."""
-        point = self.extension_points[point_name]
-        return await point.start(serverapp)
+        pass
 
     def link_all_points(self, serverapp):
         """Link all extension points."""
@@ -270,8 +226,7 @@ class ExtensionPackage(LoggingConfigurable):
 
     async def start_all_points(self, serverapp):
         """Load all extension points."""
-        for point_name in self.extension_points:
-            await self.start_point(point_name, serverapp)
+        pass
 
 
 class ExtensionManager(LoggingConfigurable):
@@ -288,14 +243,11 @@ class ExtensionManager(LoggingConfigurable):
 
     @default("config_manager")
     def _load_default_config_manager(self):
-        config_manager = ExtensionConfigManager()
-        self._load_config_manager(config_manager)
-        return config_manager
+        pass
 
     @observe("config_manager")
     def _config_manager_changed(self, change):
-        if change.new:
-            self._load_config_manager(change.new)
+        pass
 
     # The `extensions` attribute provides a dictionary
     # with extension (package) names mapped to their ExtensionPackage interface
@@ -311,7 +263,7 @@ class ExtensionManager(LoggingConfigurable):
     @property
     def sorted_extensions(self):
         """Returns an extensions dictionary, sorted alphabetically."""
-        return dict(sorted(self.extensions.items()))
+        pass
 
     # The `_linked_extensions` attribute tracks when each extension
     # has been successfully linked to a ServerApp. This helps prevent
@@ -328,29 +280,20 @@ class ExtensionManager(LoggingConfigurable):
     @property
     def extension_apps(self):
         """Return mapping of extension names and sets of ExtensionApp objects."""
-        return {
-            name: {point.app for point in extension.extension_points.values() if point.app}
-            for name, extension in self.extensions.items()
-        }
+        pass
 
     @property
     def extension_points(self):
         """Return mapping of extension point names and ExtensionPoint objects."""
-        return {
-            name: point
-            for value in self.extensions.values()
-            for name, point in value.extension_points.items()
-        }
+        pass
 
     def from_config_manager(self, config_manager):
         """Add extensions found by an ExtensionConfigManager"""
-        # load triggered via config_manager trait observer
-        self.config_manager = config_manager
+        pass
 
     def _load_config_manager(self, config_manager):
         """Actually load our config manager"""
-        jpserver_extensions = config_manager.get_jpserver_extensions()
-        self.from_jpserver_extensions(jpserver_extensions)
+        pass
 
     def from_jpserver_extensions(self, jpserver_extensions):
         """Add extensions from 'jpserver_extensions'-like dictionary."""
@@ -411,26 +354,11 @@ class ExtensionManager(LoggingConfigurable):
 
     async def start_extension(self, name):
         """Start an extension by name."""
-        extension = self.extensions.get(name)
-
-        if extension and extension.enabled:
-            try:
-                await extension.start_all_points(self.serverapp)
-            except Exception as e:
-                if self.serverapp and self.serverapp.reraise_server_extension_failures:
-                    raise
-                self.log.warning(
-                    "%s | extension failed starting with message: %r", name, e, exc_info=True
-                )
-            else:
-                self.log.debug("%s | extension was successfully started.", name)
+        pass
 
     async def stop_extension(self, name, apps):
         """Call the shutdown hooks in the specified apps."""
-        for app in apps:
-            self.log.debug("%s | extension app %r stopping", name, app.name)
-            await app.stop_extension()
-            self.log.debug("%s | extension app %r stopped", name, app.name)
+        pass
 
     def link_all_extensions(self):
         """Link all enabled extensions
@@ -452,17 +380,12 @@ class ExtensionManager(LoggingConfigurable):
 
     async def start_all_extensions(self):
         """Start all enabled extensions."""
-        # Sort the extension names to enforce deterministic loading
-        # order.
-        await multi([self.start_extension(name) for name in self.sorted_extensions])
+        pass
 
     async def stop_all_extensions(self):
         """Call the shutdown hooks in all extensions."""
-        await multi(list(starmap(self.stop_extension, sorted(dict(self.extension_apps).items()))))
+        pass
 
     def any_activity(self):
         """Check for any activity currently happening across all extension applications."""
-        for _, apps in sorted(dict(self.extension_apps).items()):
-            for app in apps:
-                if app.current_activity():
-                    return True
+        pass

@@ -55,12 +55,11 @@ class ExtensionHandlerMixin:
 
     @property
     def extensionapp(self) -> ExtensionApp:
-        return cast("ExtensionApp", self.settings[self.name])
+        pass
 
     @property
     def serverapp(self) -> ServerApp:
-        key = "serverapp"
-        return cast("ServerApp", self.settings[key])
+        pass
 
     @property
     def log(self) -> Logger:
@@ -74,15 +73,15 @@ class ExtensionHandlerMixin:
 
     @property
     def config(self) -> Config:
-        return cast("Config", self.settings[f"{self.name}_config"])
+        pass
 
     @property
     def server_config(self) -> Config:
-        return cast("Config", self.settings["config"])
+        pass
 
     @property
     def base_url(self) -> str:
-        return cast("str", self.settings.get("base_url", "/"))
+        pass
 
     def render_template(self, name: str, **ns) -> str:
         """Override render template to handle static_paths
@@ -100,11 +99,11 @@ class ExtensionHandlerMixin:
 
     @property
     def static_url_prefix(self) -> str:
-        return self.extensionapp.static_url_prefix
+        pass
 
     @property
     def static_path(self) -> str:
-        return cast("str", self.settings[f"{self.name}_static_paths"])
+        pass
 
     def static_url(self, path: str, include_host: bool | None = None, **kwargs: Any) -> str:
         """Returns a static URL for the given relative static file path.
@@ -123,33 +122,4 @@ class ExtensionHandlerMixin:
         that value will be used as the default for all `static_url`
         calls that do not pass ``include_host`` as a keyword argument.
         """
-        key = f"{self.name}_static_paths"
-        try:
-            self.require_setting(key, "static_url")  # type:ignore[attr-defined]
-        except Exception as e:
-            if key in self.settings:
-                msg = (
-                    "This extension doesn't have any static paths listed. Check that the "
-                    "extension's `static_paths` trait is set."
-                )
-                raise Exception(msg) from None
-            else:
-                raise e
-
-        get_url = self.settings.get("static_handler_class", FileFindHandler).make_static_url
-
-        if include_host is None:
-            include_host = getattr(self, "include_host", False)
-
-        base = ""
-        if include_host:
-            base = self.request.protocol + "://" + self.request.host  # type:ignore[attr-defined]
-
-        # Hijack settings dict to send extension templates to extension
-        # static directory.
-        settings = {
-            "static_path": self.static_path,
-            "static_url_prefix": self.static_url_prefix,
-        }
-
-        return base + cast("str", get_url(settings, path, **kwargs))
+        pass

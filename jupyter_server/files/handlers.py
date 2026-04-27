@@ -34,17 +34,13 @@ class FilesHandler(JupyterHandler, web.StaticFileHandler):
     @property
     def content_security_policy(self):
         """The content security policy."""
-        # In case we're serving HTML/SVG, confine any Javascript to a unique
-        # origin so it can't interact with the notebook server.
-        return super().content_security_policy + "; sandbox allow-scripts"
+        pass
 
     @web.authenticated
     @authorized
     def head(self, path: str) -> Awaitable[None] | None:  # type:ignore[override]
         """The head response."""
-        self.get(path, include_body=False)
-        self.check_xsrf_cookie()
-        return self.get(path, include_body=False)
+        pass
 
     @web.authenticated
     @authorized

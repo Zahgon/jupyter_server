@@ -62,17 +62,7 @@ class GatewayWebSocketConnection(BaseKernelWebsocketConnection):
 
     def _connection_done(self, fut):
         """Handle a finished connection."""
-        if (
-            not self.disconnected and fut.exception() is None
-        ):  # prevent concurrent.futures._base.CancelledError
-            self.ws = fut.result()
-            self.retry = 0
-            self.log.debug(f"Connection is ready: ws: {self.ws}")
-        else:
-            self.log.warning(
-                "Websocket connection has been closed via client disconnect or due to error.  "
-                f"Kernel with ID '{self.kernel_id}' may not be terminated on GatewayClient: {GatewayClient.instance().url}"
-            )
+        pass
 
     def disconnect(self):
         """Handle a disconnect."""
@@ -145,24 +135,11 @@ class GatewayWebSocketConnection(BaseKernelWebsocketConnection):
 
     def handle_incoming_message(self, message: str) -> None:
         """Send message to gateway server."""
-        if self.ws is None and self.ws_future is not None:
-            if self.ws_future.done() and self.ws_future.exception() is not None:
-                self.log.warning(
-                    "Ignoring message on failed connection to kernel %s", self.kernel_id
-                )
-                return
-            loop = IOLoop.current()
-            loop.add_future(self.ws_future, lambda future: self.handle_incoming_message(message))
-        else:
-            self._write_message(message)
+        pass
 
     def _write_message(self, message):
         """Send message to gateway server."""
-        try:
-            if not self.disconnected and self.ws is not None:
-                self.ws.write_message(message)
-        except Exception as e:
-            self.log.error(f"Exception writing message to websocket: {e}")  # , exc_info=True)
+        pass
 
     @staticmethod
     def _get_message_summary(message):

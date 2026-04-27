@@ -32,7 +32,7 @@ class ConfigManager(LoggingConfigurable):
 
     def set(self, section_name, data):
         """Set the config only to the user's config."""
-        return self.write_config_manager.set(section_name, data)
+        pass
 
     def update(self, section_name, new_data):
         """Update the config only to the user's config."""
@@ -44,20 +44,20 @@ class ConfigManager(LoggingConfigurable):
 
     @default("read_config_path")
     def _default_read_config_path(self):
-        return [os.path.join(p, self.config_dir_name) for p in jupyter_config_path()]
+        pass
 
     write_config_dir = Unicode()
 
     @default("write_config_dir")
     def _default_write_config_dir(self):
-        return os.path.join(jupyter_config_dir(), self.config_dir_name)
+        pass
 
     write_config_manager = Instance(BaseJSONConfigManager)
 
     @default("write_config_manager")
     def _default_write_config_manager(self):
-        return BaseJSONConfigManager(config_dir=self.write_config_dir)
+        pass
 
     @observe("write_config_dir")
     def _update_write_config_dir(self, change):
-        self.write_config_manager = BaseJSONConfigManager(config_dir=self.write_config_dir)
+        pass

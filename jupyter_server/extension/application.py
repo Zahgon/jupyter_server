@@ -161,15 +161,12 @@ class ExtensionApp(JupyterApp):
 
     @default("open_browser")
     def _default_open_browser(self):
-        assert self.serverapp is not None
-        return self.serverapp.config["ServerApp"].get("open_browser", True)
+        pass
 
     @property
     def config_file_paths(self):
         """Look on the same path as our parent for config files"""
-        # rely on parent serverapp, which should control all config loading
-        assert self.serverapp is not None
-        return self.serverapp.config_file_paths
+        pass
 
     # The extension name used to name the jupyter config
     # file, jupyter_{name}_config.
@@ -189,7 +186,7 @@ class ExtensionApp(JupyterApp):
     @classmethod
     def get_extension_point(cls):
         """Get an extension point."""
-        return cls.__module__
+        pass
 
     # Extension URL sets the default landing page for this extension.
     extension_url = "/"
@@ -198,7 +195,7 @@ class ExtensionApp(JupyterApp):
 
     @default("default_url")
     def _default_url(self):
-        return self.extension_url
+        pass
 
     file_url_prefix = Unicode("notebooks")
 
@@ -216,29 +213,18 @@ class ExtensionApp(JupyterApp):
     @default("serverapp")
     def _default_serverapp(self):
         # load the current global instance, if any
-        if ServerApp.initialized():
-            try:
-                return ServerApp.instance()
-            except Exception:
-                # error retrieving instance, e.g. MultipleInstanceError
-                pass
-
-        # serverapp accessed before it was defined,
-        # declare an empty one
-        return ServerApp()
+        pass
 
     _log_formatter_cls = LogFormatter  # type:ignore[assignment]
 
     @default("log_level")
     def _default_log_level(self):
-        return logging.INFO
+        pass
 
     @default("log_format")
     def _default_log_format(self):
         """override default log format to include date & time"""
-        return (
-            "%(color)s[%(levelname)1.1s %(asctime)s.%(msecs).03d %(name)s]%(end_color)s %(message)s"
-        )
+        pass
 
     static_url_prefix = Unicode(
         help="""Url where the static assets for the extension are served."""
@@ -246,9 +232,7 @@ class ExtensionApp(JupyterApp):
 
     @default("static_url_prefix")
     def _default_static_url_prefix(self):
-        static_url = f"static/{self.name}/"
-        assert self.serverapp is not None
-        return url_path_join(self.serverapp.base_url, static_url)
+        pass
 
     static_paths = List(
         Unicode(),
@@ -276,9 +260,7 @@ class ExtensionApp(JupyterApp):
 
     def _config_file_name_default(self):
         """The default config file name."""
-        if not self.name:
-            return ""
-        return "jupyter_{}_config".format(self.name.replace("-", "_"))
+        pass
 
     def initialize_settings(self):
         """Override this method to add handling of settings."""
@@ -369,15 +351,7 @@ class ExtensionApp(JupyterApp):
 
     def _jupyter_server_config(self):
         """The jupyter server config."""
-        base_config = {
-            "ServerApp": {
-                "default_url": self.default_url,
-                "open_browser": self.open_browser,
-                "file_url_prefix": self.file_url_prefix,
-            }
-        }
-        base_config["ServerApp"].update(self.serverapp_config)
-        return base_config
+        pass
 
     def _link_jupyter_server_extension(self, serverapp: ServerApp) -> None:
         """Link the ExtensionApp to an initialized ServerApp.
@@ -448,16 +422,14 @@ class ExtensionApp(JupyterApp):
 
     def current_activity(self):
         """Return a list of activity happening in this extension."""
-        return
+        pass
 
     async def stop_extension(self):
         """Cleanup any resources managed by this extension."""
 
     def stop(self):
         """Stop the underlying Jupyter server."""
-        assert self.serverapp is not None
-        self.serverapp.stop()
-        self.serverapp.clear_instance()
+        pass
 
     @classmethod
     def _load_jupyter_server_extension(cls, serverapp):
@@ -490,83 +462,7 @@ class ExtensionApp(JupyterApp):
     @classmethod
     def load_classic_server_extension(cls, serverapp):
         """Enables extension to be loaded as classic Notebook (jupyter/notebook) extension."""
-        extension = cls()
-        extension.serverapp = serverapp
-        extension.load_config_file()
-        extension.update_config(serverapp.config)
-        extension.parse_command_line(serverapp.extra_args)
-        # Add redirects to get favicons from old locations in the classic notebook server
-        extension.handlers.extend(
-            [
-                (
-                    r"/static/favicons/favicon.ico",
-                    RedirectHandler,
-                    {"url": url_path_join(serverapp.base_url, "static/base/images/favicon.ico")},
-                ),
-                (
-                    r"/static/favicons/favicon-busy-1.ico",
-                    RedirectHandler,
-                    {
-                        "url": url_path_join(
-                            serverapp.base_url, "static/base/images/favicon-busy-1.ico"
-                        )
-                    },
-                ),
-                (
-                    r"/static/favicons/favicon-busy-2.ico",
-                    RedirectHandler,
-                    {
-                        "url": url_path_join(
-                            serverapp.base_url, "static/base/images/favicon-busy-2.ico"
-                        )
-                    },
-                ),
-                (
-                    r"/static/favicons/favicon-busy-3.ico",
-                    RedirectHandler,
-                    {
-                        "url": url_path_join(
-                            serverapp.base_url, "static/base/images/favicon-busy-3.ico"
-                        )
-                    },
-                ),
-                (
-                    r"/static/favicons/favicon-file.ico",
-                    RedirectHandler,
-                    {
-                        "url": url_path_join(
-                            serverapp.base_url, "static/base/images/favicon-file.ico"
-                        )
-                    },
-                ),
-                (
-                    r"/static/favicons/favicon-notebook.ico",
-                    RedirectHandler,
-                    {
-                        "url": url_path_join(
-                            serverapp.base_url,
-                            "static/base/images/favicon-notebook.ico",
-                        )
-                    },
-                ),
-                (
-                    r"/static/favicons/favicon-terminal.ico",
-                    RedirectHandler,
-                    {
-                        "url": url_path_join(
-                            serverapp.base_url,
-                            "static/base/images/favicon-terminal.ico",
-                        )
-                    },
-                ),
-                (
-                    r"/static/logo/logo.png",
-                    RedirectHandler,
-                    {"url": url_path_join(serverapp.base_url, "static/base/images/logo.png")},
-                ),
-            ]
-        )
-        extension.initialize()
+        pass
 
     serverapp_class = ServerApp
 

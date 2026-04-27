@@ -130,34 +130,34 @@ class BaseKernelWebsocketConnection(LoggingConfigurable):
     @property
     def kernel_manager(self):
         """The kernel manager."""
-        return self.parent
+        pass
 
     @property
     def multi_kernel_manager(self):
         """The multi kernel manager."""
-        return self.kernel_manager.parent
+        pass
 
     @property
     def kernel_id(self):
         """The kernel id."""
-        return self.kernel_manager.kernel_id
+        pass
 
     @property
     def session_id(self):
         """The session id."""
-        return self.session.session
+        pass
 
     kernel_info_timeout = Float()
 
     @default("kernel_info_timeout")
     def _default_kernel_info_timeout(self):
-        return self.multi_kernel_manager.kernel_info_timeout
+        pass
 
     session = Instance(klass=Session, config=True)
 
     @default("session")
     def _default_session(self):
-        return Session(config=self.config)
+        pass
 
     websocket_handler = Instance(WebSocketHandler)
 

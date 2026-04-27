@@ -73,17 +73,7 @@ class User:
         - Fills out derivative values for name fields fields
         - Fills out null values for optional fields
         """
-
-        # username is the only truly required field
-        if not self.username:
-            msg = f"user.username must not be empty: {self}"
-            raise ValueError(msg)
-
-        # derive name fields from username -> name -> display name
-        if not self.name:
-            self.name = self.username
-        if not self.display_name:
-            self.display_name = self.name
+        pass
 
 
 def _backward_compat_user(got_user: t.Any) -> User:
@@ -208,32 +198,12 @@ class IdentityProvider(LoggingConfigurable):
 
     @default("token")
     def _token_default(self):
-        if os.getenv("JUPYTER_TOKEN"):
-            self.token_generated = False
-            return os.environ["JUPYTER_TOKEN"]
-        if os.getenv("JUPYTER_TOKEN_FILE"):
-            self.token_generated = False
-            with open(os.environ["JUPYTER_TOKEN_FILE"]) as token_file:
-                return token_file.read()
-        if not self.need_token:
-            # no token if password is enabled
-            self.token_generated = False
-            return ""
-        else:
-            self.token_generated = True
-            return binascii.hexlify(os.urandom(24)).decode("ascii")
+        pass
 
     @validate("updatable_fields")
     def _validate_updatable_fields(self, proposal):
         """Validate that all fields in updatable_fields are valid."""
-        valid_updatable_fields = list(t.get_args(UpdatableField))
-        invalid_fields = [
-            field for field in proposal["value"] if field not in valid_updatable_fields
-        ]
-        if invalid_fields:
-            msg = f"Invalid fields in updatable_fields: {invalid_fields}"
-            raise TraitError(msg)
-        return proposal["value"]
+        pass
 
     need_token: bool | Bool[bool, t.Union[bool, int]] = Bool(True)
 
@@ -332,12 +302,7 @@ class IdentityProvider(LoggingConfigurable):
 
         For example, an OAuth callback handler.
         """
-        handlers = []
-        if self.login_available:
-            handlers.append((r"/login", self.login_handler_class))
-        if self.logout_available:
-            handlers.append((r"/logout", self.logout_handler_class))
-        return handlers
+        pass
 
     def user_to_cookie(self, user: User) -> str:
         """Serialize a user to a string for storage in a cookie
@@ -582,16 +547,7 @@ class IdentityProvider(LoggingConfigurable):
 
         Return authenticated User if successful, None if not.
         """
-        typed_password = handler.get_argument("password", default="")
-        user = None
-        if not self.auth_enabled:
-            self.log.warning("Accepting anonymous login because auth fully disabled!")
-            return self.generate_anonymous_user(handler)
-
-        if self.token and self.token == typed_password:
-            return t.cast("User", self.user_for_token(typed_password))  # type:ignore[attr-defined]
-
-        return user
+        pass
 
     @property
     def auth_enabled(self):
@@ -602,17 +558,17 @@ class IdentityProvider(LoggingConfigurable):
 
         Previously: LoginHandler.get_login_available
         """
-        return True
+        pass
 
     @property
     def login_available(self):
         """Whether a LoginHandler is needed - and therefore whether the login page should be displayed."""
-        return self.auth_enabled
+        pass
 
     @property
     def logout_available(self):
         """Whether a LogoutHandler is needed."""
-        return True
+        pass
 
     def cookie_secret_hook(self, h: hmac.HMAC) -> hmac.HMAC:
         """Update cookie secret input
@@ -624,7 +580,7 @@ class IdentityProvider(LoggingConfigurable):
         The updated hashlib object should be returned.
 
         """
-        return h
+        pass
 
 
 class PasswordIdentityProvider(IdentityProvider):
@@ -680,27 +636,21 @@ class PasswordIdentityProvider(IdentityProvider):
 
     @default("need_token")
     def _need_token_default(self):
-        return not bool(self.hashed_password)
+        pass
 
     @default("updatable_fields")
     def _default_updatable_fields(self):
-        return [
-            "name",
-            "display_name",
-            "initials",
-            "avatar_url",
-            "color",
-        ]
+        pass
 
     @property
     def login_available(self) -> bool:
         """Whether a LoginHandler is needed - and therefore whether the login page should be displayed."""
-        return self.auth_enabled
+        pass
 
     @property
     def auth_enabled(self) -> bool:
         """Return whether any auth is enabled"""
-        return bool(self.hashed_password or self.token)
+        pass
 
     def update_user_model(self, current_user: User, user_data: dict[UpdatableField, str]) -> User:
         """Update user information."""
@@ -722,24 +672,7 @@ class PasswordIdentityProvider(IdentityProvider):
 
         Return authenticated User if successful, None if not.
         """
-        typed_password = handler.get_argument("password", default="")
-        new_password = handler.get_argument("new_password", default="")
-        user = None
-        if not self.auth_enabled:
-            self.log.warning("Accepting anonymous login because auth fully disabled!")
-            return self.generate_anonymous_user(handler)
-
-        if self.passwd_check(typed_password) and not new_password:
-            return self.generate_anonymous_user(handler)
-        elif self.token and self.token == typed_password:
-            user = self.generate_anonymous_user(handler)
-            if new_password and self.allow_password_change:
-                config_dir = handler.settings.get("config_dir", "")
-                config_file = os.path.join(config_dir, "jupyter_server_config.json")
-                self.hashed_password = set_password(new_password, config_file=config_file)
-                self.log.info(_i18n("Wrote hashed password to {file}").format(file=config_file))
-
-        return user
+        pass
 
     def validate_security(
         self,
@@ -761,8 +694,7 @@ class PasswordIdentityProvider(IdentityProvider):
 
         This makes it so changing the password invalidates cookies.
         """
-        h.update(self.hashed_password.encode())
-        return h
+        pass
 
 
 class LegacyIdentityProvider(PasswordIdentityProvider):
@@ -777,20 +709,15 @@ class LegacyIdentityProvider(PasswordIdentityProvider):
 
     @default("settings")
     def _default_settings(self):
-        return {
-            "token": self.token,
-            "password": self.hashed_password,
-        }
+        pass
 
     @default("login_handler_class")
     def _default_login_handler_class(self):
-        from .login import LegacyLoginHandler
-
-        return LegacyLoginHandler
+        pass
 
     @property
     def auth_enabled(self):
-        return self.login_available
+        pass
 
     def get_user(self, handler: web.RequestHandler) -> User | None:
         """Get the user."""
@@ -801,11 +728,7 @@ class LegacyIdentityProvider(PasswordIdentityProvider):
 
     @property
     def login_available(self) -> bool:
-        return bool(
-            self.login_handler_class.get_login_available(  # type:ignore[attr-defined]
-                self.settings
-            )
-        )
+        pass
 
     def should_check_origin(self, handler: web.RequestHandler) -> bool:
         """Whether we should check origin."""

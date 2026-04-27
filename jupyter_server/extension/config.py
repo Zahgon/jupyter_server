@@ -19,11 +19,7 @@ class ExtensionConfigManager(ConfigManager):
 
     def enabled(self, name, section_name=DEFAULT_SECTION_NAME, include_root=True):
         """Is the extension enabled?"""
-        extensions = self.get_jpserver_extensions(section_name)
-        try:
-            return extensions[name]
-        except KeyError:
-            return False
+        pass
 
     def enable(self, name):
         """Enable an extension by name."""

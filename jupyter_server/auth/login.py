@@ -87,16 +87,7 @@ class LoginFormHandler(JupyterHandler):
     @allow_unauthenticated
     def post(self):
         """Post a login."""
-        user = self.current_user = self.identity_provider.process_login_form(self)
-        if user is None:
-            self.set_status(401)
-            self._render(message={"error": "Invalid credentials"})
-            return
-
-        self.log.info(f"User {user.username} logged in.")
-        self.identity_provider.set_login_cookie(self, user)
-        next_url = self.get_argument("next", default=self.base_url)
-        self._redirect_safe(next_url)
+        pass
 
 
 class LegacyLoginHandler(LoginFormHandler):
@@ -108,7 +99,7 @@ class LegacyLoginHandler(LoginFormHandler):
 
     @property
     def hashed_password(self):
-        return self.password_from_settings(self.settings)
+        pass
 
     def passwd_check(self, a, b):
         """Check a passwd."""
@@ -117,29 +108,7 @@ class LegacyLoginHandler(LoginFormHandler):
     @allow_unauthenticated
     def post(self):
         """Post a login form."""
-        typed_password = self.get_argument("password", default="")
-        new_password = self.get_argument("new_password", default="")
-
-        if self.get_login_available(self.settings):
-            if self.passwd_check(self.hashed_password, typed_password) and not new_password:
-                self.set_login_cookie(self, uuid.uuid4().hex)
-            elif self.token and self.token == typed_password:
-                self.set_login_cookie(self, uuid.uuid4().hex)
-                if new_password and getattr(self.identity_provider, "allow_password_change", False):
-                    config_dir = self.settings.get("config_dir", "")
-                    config_file = os.path.join(config_dir, "jupyter_server_config.json")
-                    if hasattr(self.identity_provider, "hashed_password"):
-                        self.identity_provider.hashed_password = self.settings["password"] = (
-                            set_password(new_password, config_file=config_file)
-                        )
-                    self.log.info("Wrote hashed password to %s" % config_file)
-            else:
-                self.set_status(401)
-                self._render(message={"error": "Invalid credentials"})
-                return
-
-        next_url = self.get_argument("next", default=self.base_url)
-        self._redirect_safe(next_url)
+        pass
 
     @classmethod
     def set_login_cookie(cls, handler, user_id=None):
@@ -286,13 +255,12 @@ class LegacyLoginHandler(LoginFormHandler):
     @classmethod
     def password_from_settings(cls, settings):
         """DEPRECATED in 2.0, use IdentityProvider API"""
-        return settings.get("password", "")
+        pass
 
     @classmethod
     def get_login_available(cls, settings):
         """DEPRECATED in 2.0, use IdentityProvider API"""
-
-        return bool(cls.password_from_settings(settings) or settings.get("token"))
+        pass
 
 
 # deprecated import, so deprecated implementations get the Legacy class instead

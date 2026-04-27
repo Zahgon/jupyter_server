@@ -30,7 +30,7 @@ class APISpecHandler(web.StaticFileHandler, JupyterHandler):
     @web.authenticated
     @authorized
     def head(self):  # type: ignore[override]
-        return self.get("api.yaml", include_body=False)
+        pass
 
     @web.authenticated
     @authorized
@@ -41,7 +41,7 @@ class APISpecHandler(web.StaticFileHandler, JupyterHandler):
 
     def get_content_type(self):
         """Get the content type."""
-        return "text/x-yaml"
+        pass
 
 
 class APIStatusHandler(APIHandler):

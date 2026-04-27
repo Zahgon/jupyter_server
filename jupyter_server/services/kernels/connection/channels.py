@@ -111,14 +111,14 @@ class ZMQChannelsWebsocketConnection(BaseKernelWebsocketConnection):
     @default("_kernel_info_future")
     def _default_kernel_info_future(self):
         """The default kernel info future."""
-        return Future()
+        pass
 
     _close_future = Instance(klass=Future)  # type:ignore[assignment]
 
     @default("_close_future")
     def _default_close_future(self):
         """The default close future."""
-        return Future()
+        pass
 
     session_key = Unicode("")
 
@@ -134,18 +134,12 @@ class ZMQChannelsWebsocketConnection(BaseKernelWebsocketConnection):
     @classmethod
     async def close_all(cls):
         """Tornado does not provide a way to close open sockets, so add one."""
-        for connection in list(cls._open_sockets):
-            connection.disconnect()
-            await _ensure_future(connection._close_future)
+        pass
 
     @property
     def subprotocol(self):
         """The sub protocol."""
-        try:
-            protocol = self.websocket_handler.selected_subprotocol
-        except Exception:
-            protocol = None
-        return protocol
+        pass
 
     def create_stream(self):
         """Create a stream."""
@@ -206,37 +200,22 @@ class ZMQChannelsWebsocketConnection(BaseKernelWebsocketConnection):
 
         def cleanup(_=None):
             """Common cleanup"""
-            loop.remove_timeout(nudge_handle)
-            iopub_channel.stop_on_recv()
-            if not shell_channel.closed():
-                shell_channel.close()
-            if not control_channel.closed():
-                control_channel.close()
+            pass
 
         # trigger cleanup when both message futures are resolved
         all_done.add_done_callback(cleanup)
 
         def on_shell_reply(msg):
             """Handle nudge shell replies."""
-            self.log.debug("Nudge: shell info reply received: %s", self.kernel_id)
-            if not info_future.done():
-                self.log.debug("Nudge: resolving shell future: %s", self.kernel_id)
-                info_future.set_result(None)
+            pass
 
         def on_control_reply(msg):
             """Handle nudge control replies."""
-            self.log.debug("Nudge: control info reply received: %s", self.kernel_id)
-            if not info_future.done():
-                self.log.debug("Nudge: resolving control future: %s", self.kernel_id)
-                info_future.set_result(None)
+            pass
 
         def on_iopub(msg):
             """Handle nudge iopub replies."""
-            self.log.debug("Nudge: IOPub received: %s", self.kernel_id)
-            if not iopub_future.done():
-                iopub_channel.stop_on_recv()
-                self.log.debug("Nudge: resolving iopub future: %s", self.kernel_id)
-                iopub_future.set_result(None)
+            pass
 
         iopub_channel.on_recv(on_iopub)
         shell_channel.on_recv(on_shell_reply)
@@ -335,10 +314,7 @@ class ZMQChannelsWebsocketConnection(BaseKernelWebsocketConnection):
 
         def give_up():
             """Don't wait forever for the kernel to reply"""
-            if future.done():
-                return
-            self.log.warning("Timeout waiting for kernel_info reply from %s", self.kernel_id)
-            future.set_result({})
+            pass
 
         loop = IOLoop.current()
         loop.add_timeout(loop.time() + self.kernel_info_timeout, give_up)
@@ -364,12 +340,7 @@ class ZMQChannelsWebsocketConnection(BaseKernelWebsocketConnection):
             connected = self.nudge()
 
             def replay(value):
-                replay_buffer = buffer_info["buffer"]
-                if replay_buffer:
-                    self.log.info("Replaying %s buffered messages", len(replay_buffer))
-                    for channel, msg_list in replay_buffer:
-                        stream = self.channels[channel]
-                        self.handle_outgoing_message(stream, msg_list)
+                pass
 
             connected.add_done_callback(replay)
         else:
@@ -398,8 +369,7 @@ class ZMQChannelsWebsocketConnection(BaseKernelWebsocketConnection):
         )
 
         def subscribe(value):
-            for stream in self.channels.values():
-                stream.on_recv_stream(self.handle_outgoing_message)
+            pass
 
         connected.add_done_callback(subscribe)
         ZMQChannelsWebsocketConnection._open_sockets.add(self)
@@ -457,48 +427,7 @@ class ZMQChannelsWebsocketConnection(BaseKernelWebsocketConnection):
 
     def handle_incoming_message(self, incoming_msg: str) -> None:
         """Handle incoming messages from Websocket to ZMQ Sockets."""
-        ws_msg = incoming_msg
-        if not self.channels:
-            # already closed, ignore the message
-            self.log.debug("Received message on closed websocket %r", ws_msg)
-            return
-
-        if self.subprotocol == "v1.kernel.websocket.jupyter.org":
-            channel, msg_list = deserialize_msg_from_ws_v1(ws_msg)
-            msg = {
-                "header": None,
-            }
-        else:
-            if isinstance(ws_msg, bytes):  # type:ignore[unreachable]
-                msg = deserialize_binary_message(ws_msg)  # type:ignore[unreachable]
-            else:
-                msg = json.loads(ws_msg)
-            msg_list = []
-            channel = msg.pop("channel", None)
-
-        if channel is None:
-            self.log.warning("No channel specified, assuming shell: %s", msg)
-            channel = "shell"
-        if channel not in self.channels:
-            self.log.warning("No such channel: %r", channel)
-            return
-        am = self.multi_kernel_manager.allowed_message_types
-        ignore_msg = False
-        if am:
-            msg["header"] = self.get_part("header", msg["header"], msg_list)
-            assert msg["header"] is not None
-            if msg["header"]["msg_type"] not in am:  # type:ignore[unreachable]
-                self.log.warning(
-                    'Received message of type "%s", which is not allowed. Ignoring.'
-                    % msg["header"]["msg_type"]
-                )
-                ignore_msg = True
-        if not ignore_msg:
-            stream = self.channels[channel]
-            if self.subprotocol == "v1.kernel.websocket.jupyter.org":
-                self.session.send_raw(stream, msg_list)
-            else:
-                self.session.send(stream, msg)
+        pass
 
     def handle_outgoing_message(self, stream: str, outgoing_msg: list[t.Any]) -> None:
         """Handle the outgoing messages from ZMQ sockets to Websocket."""
@@ -612,25 +541,7 @@ class ZMQChannelsWebsocketConnection(BaseKernelWebsocketConnection):
 
         enabling msg spec adaptation, if necessary
         """
-        _idents, msg = self.session.feed_identities(msg)
-        try:
-            msg = self.session.deserialize(msg)
-        except BaseException:
-            self.log.error("Bad kernel_info reply", exc_info=True)
-            self._kernel_info_future.set_result({})
-            return
-        else:
-            info = msg["content"]
-            self.log.debug("Received kernel info: %s", info)
-            if msg["msg_type"] != "kernel_info_reply" or "protocol_version" not in info:
-                self.log.error("Kernel info request failed, assuming current %s", info)
-                info = {}
-            self._finish_kernel_info(info)
-
-        # close the kernel_info channel, we don't need it anymore
-        if self.kernel_info_channel:
-            self.kernel_info_channel.close()
-        self.kernel_info_channel = None
+        pass
 
     def _finish_kernel_info(self, info):
         """Finish handling kernel_info reply
@@ -779,29 +690,15 @@ class ZMQChannelsWebsocketConnection(BaseKernelWebsocketConnection):
 
     def _send_status_message(self, status):
         """Send a status message."""
-        iopub = self.channels.get("iopub", None)
-        if iopub and not iopub.closed():
-            # flush IOPub before sending a restarting/dead status message
-            # ensures proper ordering on the IOPub channel
-            # that all messages from the stopped kernel have been delivered
-            iopub.flush()
-        msg = self.session.msg("status", {"execution_state": status})
-        if self.subprotocol == "v1.kernel.websocket.jupyter.org":
-            bin_msg = serialize_msg_to_ws_v1(msg, "iopub", self.session.pack)
-            self.write_message(bin_msg, binary=True)
-        else:
-            msg["channel"] = "iopub"
-            self.write_message(json.dumps(msg, default=json_default))
+        pass
 
     def on_kernel_restarted(self):
         """Handle a kernel restart."""
-        self.log.warning("kernel %s restarted", self.kernel_id)
-        self._send_status_message("restarting")
+        pass
 
     def on_restart_failed(self):
         """Handle a kernel restart failure."""
-        self.log.error("kernel %s restarted failed!", self.kernel_id)
-        self._send_status_message("dead")
+        pass
 
     def _on_error(self, channel, msg, msg_list):
         """Handle an error message."""

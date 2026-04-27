@@ -57,18 +57,17 @@ class SubscribeWebsocket(
         self, logger: jupyter_events.logger.EventLogger, schema_id: str, data: dict[str, Any]
     ) -> None:
         """Write an event message."""
-        capsule = dict(schema_id=schema_id, **data)
-        self.write_message(json.dumps(capsule))
+        pass
 
     def open(self) -> None:  # type: ignore[override]
         """Routes events that are emitted by Jupyter Server's
         EventBus to a WebSocket client in the browser.
         """
-        self.event_logger.add_listener(listener=self.event_listener)
+        pass
 
     def on_close(self):
         """Handle a socket close."""
-        self.event_logger.remove_listener(listener=self.event_listener)
+        pass
 
 
 def validate_model(
@@ -88,26 +87,13 @@ def validate_model(
     schema = registry.get(schema_id)
     version = str(cast("str", data.get("version")))
     if schema.version != version:
-        message = f"Unregistered version: {version!r}≠{schema.version!r} for `{schema_id}`"
+        message = f"Unregistered version: {version!r}â‰ {schema.version!r} for `{schema_id}`"
         raise Exception(message)
 
 
 def get_timestamp(data: dict[str, Any]) -> Optional[datetime]:
     """Parses timestamp from the JSON request body"""
-    try:
-        if "timestamp" in data:
-            timestamp = datetime.strptime(data["timestamp"], "%Y-%m-%dT%H:%M:%S%zZ")
-        else:
-            timestamp = None
-    except Exception as e:
-        raise web.HTTPError(
-            400,
-            """Failed to parse timestamp from JSON request body,
-            an ISO format datetime string with UTC offset is expected,
-            for example, 2022-05-26T13:50:00+05:00Z""",
-        ) from e
-
-    return timestamp
+    pass
 
 
 class EventHandler(APIHandler):
@@ -119,23 +105,7 @@ class EventHandler(APIHandler):
     @authorized
     async def post(self):
         """Emit an event."""
-        payload = self.get_json_body()
-        if payload is None:
-            raise web.HTTPError(400, "No JSON data provided")
-
-        try:
-            validate_model(payload, self.event_logger.schemas)
-            self.event_logger.emit(
-                schema_id=cast("str", payload.get("schema_id")),
-                data=cast("dict[str, Any]", payload.get("data")),
-                timestamp_override=get_timestamp(payload),
-            )
-            self.set_status(204)
-            self.finish()
-        except Exception as e:
-            # All known exceptions are raised by bad requests, e.g., bad
-            # version, unregistered schema, invalid emission data payload, etc.
-            raise web.HTTPError(400, str(e)) from e
+        pass
 
 
 default_handlers = [

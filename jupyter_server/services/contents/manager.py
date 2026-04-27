@@ -66,14 +66,7 @@ class ContentsManager(LoggingConfigurable):
 
     @default("event_logger")
     def _default_event_logger(self):
-        if self.parent and hasattr(self.parent, "event_logger"):
-            return self.parent.event_logger
-        else:
-            # If parent does not have an event logger, create one.
-            logger = EventLogger()
-            schema_path = DEFAULT_EVENTS_SCHEMA_PATH / "contents_service" / "v1.yaml"
-            logger.register_event_schema(schema_path)
-            return logger
+        pass
 
     def emit(self, data):
         """Emit event using the core event schema from Jupyter Server's Contents Manager."""
@@ -91,25 +84,7 @@ class ContentsManager(LoggingConfigurable):
 
     @validate("preferred_dir")
     def _validate_preferred_dir(self, proposal):
-        value = proposal["value"].strip("/")
-        try:
-            import inspect
-
-            if inspect.iscoroutinefunction(self.dir_exists):
-                dir_exists = run_sync(self.dir_exists)(value)
-            else:
-                dir_exists = self.dir_exists(value)
-        except HTTPError as e:
-            raise TraitError(e.log_message) from e
-        if not dir_exists:
-            raise TraitError(_i18n("Preferred directory not found: %r") % value)
-        if self.parent:
-            try:
-                if value != self.parent.preferred_dir:
-                    self.parent.preferred_dir = os.path.join(self.root_dir, *value.split("/"))
-            except TraitError:
-                pass
-        return value
+        pass
 
     allow_hidden = Bool(False, config=True, help="Allow access to hidden files")
 
@@ -117,7 +92,7 @@ class ContentsManager(LoggingConfigurable):
 
     @default("notary")
     def _notary_default(self):
-        return sign.NotebookNotary(parent=self)
+        pass
 
     hide_globs = List(
         Unicode(),
@@ -175,18 +150,7 @@ class ContentsManager(LoggingConfigurable):
 
     @validate("pre_save_hook")
     def _validate_pre_save_hook(self, proposal):
-        value = proposal["value"]
-        if isinstance(value, str):
-            value = import_item(self.pre_save_hook)
-        if not callable(value):
-            msg = "pre_save_hook must be callable"
-            raise TraitError(msg)
-        if callable(self.pre_save_hook):
-            warnings.warn(
-                f"Overriding existing pre_save_hook ({self.pre_save_hook.__name__}) with a new one ({value.__name__}).",
-                stacklevel=2,
-            )
-        return value
+        pass
 
     post_save_hook = Any(
         None,
@@ -211,75 +175,26 @@ class ContentsManager(LoggingConfigurable):
 
     @validate("post_save_hook")
     def _validate_post_save_hook(self, proposal):
-        value = proposal["value"]
-        if isinstance(value, str):
-            value = import_item(value)
-        if not callable(value):
-            msg = "post_save_hook must be callable"
-            raise TraitError(msg)
-        if callable(self.post_save_hook):
-            warnings.warn(
-                f"Overriding existing post_save_hook ({self.post_save_hook.__name__}) with a new one ({value.__name__}).",
-                stacklevel=2,
-            )
-        return value
+        pass
 
     def run_pre_save_hook(self, model, path, **kwargs):
         """Run the pre-save hook if defined, and log errors"""
-        warnings.warn(
-            "run_pre_save_hook is deprecated, use run_pre_save_hooks instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        if self.pre_save_hook:
-            try:
-                self.log.debug("Running pre-save hook on %s", path)
-                self.pre_save_hook(model=model, path=path, contents_manager=self, **kwargs)
-            except HTTPError:
-                # allow custom HTTPErrors to raise,
-                # rejecting the save with a message.
-                raise
-            except Exception:
-                # unhandled errors don't prevent saving,
-                # which could cause frustrating data loss
-                self.log.error("Pre-save hook failed on %s", path, exc_info=True)
+        pass
 
     def run_post_save_hook(self, model, os_path):
         """Run the post-save hook if defined, and log errors"""
-        warnings.warn(
-            "run_post_save_hook is deprecated, use run_post_save_hooks instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        if self.post_save_hook:
-            try:
-                self.log.debug("Running post-save hook on %s", os_path)
-                self.post_save_hook(os_path=os_path, model=model, contents_manager=self)
-            except Exception:
-                self.log.error("Post-save hook failed o-n %s", os_path, exc_info=True)
-                msg = "fUnexpected error while running post hook save: {e}"
-                raise HTTPError(500, msg) from None
+        pass
 
     _pre_save_hooks: List[t.Any] = List()
     _post_save_hooks: List[t.Any] = List()
 
     def register_pre_save_hook(self, hook):
         """Register a pre save hook."""
-        if isinstance(hook, str):
-            hook = import_item(hook)
-        if not callable(hook):
-            msg = "hook must be callable"
-            raise RuntimeError(msg)
-        self._pre_save_hooks.append(hook)
+        pass
 
     def register_post_save_hook(self, hook):
         """Register a post save hook."""
-        if isinstance(hook, str):
-            hook = import_item(hook)
-        if not callable(hook):
-            msg = "hook must be callable"
-            raise RuntimeError(msg)
-        self._post_save_hooks.append(hook)
+        pass
 
     def run_pre_save_hooks(self, model, path, **kwargs):
         """Run the pre-save hooks if any, and log errors"""
@@ -326,14 +241,11 @@ class ContentsManager(LoggingConfigurable):
 
     @default("checkpoints")
     def _default_checkpoints(self):
-        return self.checkpoints_class(**self.checkpoints_kwargs)
+        pass
 
     @default("checkpoints_kwargs")
     def _default_checkpoints_kwargs(self):
-        return {
-            "parent": self,
-            "log": self.log,
-        }
+        pass
 
     files_handler_class = Type(
         FilesHandler,
@@ -366,10 +278,7 @@ class ContentsManager(LoggingConfigurable):
 
         Default: self.files_handler_class on /files/.*
         """
-        handlers = []
-        if self.files_handler_class:
-            handlers.append((r"/files/(.*)", self.files_handler_class, self.files_handler_params))
-        return handlers
+        pass
 
     # ContentsManager API part 1: methods that must be
     # implemented in subclasses.
@@ -481,12 +390,7 @@ class ContentsManager(LoggingConfigurable):
 
     def delete(self, path):
         """Delete a file/directory and any associated checkpoints."""
-        path = path.strip("/")
-        if not path:
-            raise HTTPError(400, "Can't delete root")
-        self.delete_file(path)
-        self.checkpoints.delete_all_checkpoints(path)
-        self.emit(data={"action": "delete", "path": path})
+        pass
 
     def rename(self, old_path, new_path):
         """Rename a file and any checkpoints associated with that file."""
@@ -689,7 +593,7 @@ class ContentsManager(LoggingConfigurable):
 
     def log_info(self):
         """Log the information string for the manager."""
-        self.log.info(self.info_string())
+        pass
 
     def trust_notebook(self, path):
         """Explicitly trust a notebook
@@ -699,11 +603,7 @@ class ContentsManager(LoggingConfigurable):
         path : str
             The path of a notebook
         """
-        model = self.get(path)
-        nb = model["content"]
-        self.log.warning("Trusting notebook %s", path)
-        self.notary.mark_cells(nb, True)
-        self.check_and_sign(nb, path)
+        pass
 
     def check_and_sign(self, nb, path=""):
         """Check for trusted cells, and sign the notebook.
@@ -752,13 +652,13 @@ class ContentsManager(LoggingConfigurable):
         """
         Restore a checkpoint.
         """
-        self.checkpoints.restore_checkpoint(self, checkpoint_id, path)
+        pass
 
     def list_checkpoints(self, path):
         return self.checkpoints.list_checkpoints(path)
 
     def delete_checkpoint(self, checkpoint_id, path):
-        return self.checkpoints.delete_checkpoint(checkpoint_id, path)
+        pass
 
 
 class AsyncContentsManager(ContentsManager):
@@ -770,14 +670,11 @@ class AsyncContentsManager(ContentsManager):
 
     @default("checkpoints")
     def _default_checkpoints(self):
-        return self.checkpoints_class(**self.checkpoints_kwargs)
+        pass
 
     @default("checkpoints_kwargs")
     def _default_checkpoints_kwargs(self):
-        return {
-            "parent": self,
-            "log": self.log,
-        }
+        pass
 
     # ContentsManager API part 1: methods that must be
     # implemented in subclasses.
@@ -891,13 +788,7 @@ class AsyncContentsManager(ContentsManager):
 
     async def delete(self, path):
         """Delete a file/directory and any associated checkpoints."""
-        path = path.strip("/")
-        if not path:
-            raise HTTPError(400, "Can't delete root")
-
-        await self.delete_file(path)
-        await self.checkpoints.delete_all_checkpoints(path)
-        self.emit(data={"action": "delete", "path": path})
+        pass
 
     async def rename(self, old_path, new_path):
         """Rename a file and any checkpoints associated with that file."""
@@ -1071,11 +962,7 @@ class AsyncContentsManager(ContentsManager):
         path : str
             The path of a notebook
         """
-        model = await self.get(path)
-        nb = model["content"]
-        self.log.warning("Trusting notebook %s", path)
-        self.notary.mark_cells(nb, True)
-        self.check_and_sign(nb, path)
+        pass
 
     # Part 3: Checkpoints API
     async def create_checkpoint(self, path):
@@ -1086,7 +973,7 @@ class AsyncContentsManager(ContentsManager):
         """
         Restore a checkpoint.
         """
-        await self.checkpoints.restore_checkpoint(self, checkpoint_id, path)
+        pass
 
     async def list_checkpoints(self, path):
         """List the checkpoints for a path."""
@@ -1094,4 +981,4 @@ class AsyncContentsManager(ContentsManager):
 
     async def delete_checkpoint(self, checkpoint_id, path):
         """Delete a checkpoint for a path by id."""
-        return await self.checkpoints.delete_checkpoint(checkpoint_id, path)
+        pass

@@ -60,9 +60,7 @@ class CallContext:
         -------
         None
         """
-        name_value_map = CallContext._get_map().copy()
-        name_value_map[name] = value
-        CallContext._name_value_map.set(name_value_map)
+        pass
 
     @classmethod
     def context_variable_names(cls) -> list[str]:
@@ -73,8 +71,7 @@ class CallContext:
         names: List[str]
             A list of variable names set for this call context.
         """
-        name_value_map = CallContext._get_map()
-        return list(name_value_map.keys())
+        pass
 
     @classmethod
     def _get_map(cls) -> dict[str, Any]:

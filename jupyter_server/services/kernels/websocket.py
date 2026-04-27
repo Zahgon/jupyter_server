@@ -31,7 +31,7 @@ class KernelWebsocketHandler(WebSocketMixin, WebSocketHandler, JupyterHandler):
 
     def get_compression_options(self):
         """Get the socket connection options."""
-        return self.settings.get("websocket_compression_options", None)
+        pass
 
     async def pre_get(self):
         """Handle a pre_get."""
@@ -67,29 +67,16 @@ class KernelWebsocketHandler(WebSocketMixin, WebSocketHandler, JupyterHandler):
 
     async def open(self, kernel_id):  # type: ignore[override]
         """Open a kernel websocket."""
-        # Need to call super here to make sure we
-        # begin a ping-pong loop with the client.
-        super().open()
-        # Wait for the kernel to emit an idle status.
-        self.log.info(f"Connecting to kernel {self.kernel_id}.")
-        await self.connection.connect()
+        pass
 
     def on_message(self, ws_message):
         """Get a kernel message from the websocket and turn it into a ZMQ message."""
-        self.connection.handle_incoming_message(ws_message)
+        pass
 
     def on_close(self):
         """Handle a socket closure."""
-        self.connection.disconnect()
-        self.connection = None
+        pass
 
     def select_subprotocol(self, subprotocols):
         """Select the sub protocol for the socket."""
-        preferred_protocol = self.connection.kernel_ws_protocol
-        if preferred_protocol is None:
-            preferred_protocol = "v1.kernel.websocket.jupyter.org"
-        elif preferred_protocol == "":
-            preferred_protocol = None
-        selected_subprotocol = preferred_protocol if preferred_protocol in subprotocols else None
-        # None is the default, "legacy" protocol
-        return selected_subprotocol
+        pass

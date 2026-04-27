@@ -46,35 +46,7 @@ def authorized(
         @wraps(method)
         async def inner(self, *args, **kwargs):
             # default values for action, resource
-            nonlocal action
-            nonlocal resource
-            nonlocal message
-            if action is None:
-                http_method = self.request.method.upper()
-                action = HTTP_METHOD_TO_AUTH_ACTION[http_method]
-            if resource is None:
-                resource = self.auth_resource
-            if message is None:
-                message = f"User is not authorized to {action} on resource: {resource}."
-
-            user = self.current_user
-            if not user:
-                app_log.warning("Attempting to authorize request without authentication!")
-                raise HTTPError(status_code=403, log_message=message)
-            # If the user is allowed to do this action,
-            # call the method.
-            authorized = await ensure_async(
-                self.authorizer.is_authorized(self, user, action, resource)
-            )
-            if authorized:
-                out = method(self, *args, **kwargs)
-                # If the method is a coroutine, await it
-                if asyncio.iscoroutine(out):
-                    return await out
-                return out
-            # else raise an exception.
-            else:
-                raise HTTPError(status_code=403, log_message=message)
+            pass
 
         return inner
 

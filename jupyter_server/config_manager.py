@@ -40,15 +40,7 @@ def recursive_update(target: StrDict, new: StrDict) -> None:
 
 def remove_defaults(data: StrDict, defaults: StrDict) -> None:
     """Recursively remove items from dict that are already in defaults"""
-    # copy the iterator, since data will be modified
-    for key, value in list(data.items()):
-        if key in defaults:
-            if isinstance(value, dict):
-                remove_defaults(data[key], defaults[key])
-                if not data[key]:  # prune empty subdicts
-                    del data[key]
-            elif value == defaults[key]:
-                del data[key]
+    pass
 
 
 class BaseJSONConfigManager(LoggingConfigurable):
@@ -63,11 +55,7 @@ class BaseJSONConfigManager(LoggingConfigurable):
 
     def ensure_config_dir_exists(self) -> None:
         """Will try to create the config_dir directory."""
-        try:
-            os.makedirs(self.config_dir, 0o755)
-        except OSError as e:
-            if e.errno != errno.EEXIST:
-                raise
+        pass
 
     def file_name(self, section_name: str) -> str:
         """Returns the json filename for the section_name: {config_dir}/{section_name}.json"""
@@ -112,20 +100,7 @@ class BaseJSONConfigManager(LoggingConfigurable):
 
     def set(self, section_name: str, data: t.Any) -> None:
         """Store the given config data."""
-        filename = self.file_name(section_name)
-        self.ensure_config_dir_exists()
-
-        if self.read_directory:
-            # we will modify data in place, so make a copy
-            data = copy.deepcopy(data)
-            defaults = self.get(section_name, include_root=False)
-            remove_defaults(data, defaults)
-
-        # Generate the JSON up front, since it could raise an exception,
-        # in order to avoid writing half-finished corrupted data to disk.
-        json_content = json.dumps(data, indent=2)
-        with open(filename, "w", encoding="utf-8") as f:
-            f.write(json_content)
+        pass
 
     def update(self, section_name: str, new_data: t.Any) -> dict[str, t.Any]:
         """Modify the config section by recursively updating it with new_data.

@@ -19,11 +19,11 @@ class tzUTC(tzinfo):  # noqa: N801
 
     def utcoffset(self, d: datetime | None) -> timedelta:
         """Compute utcoffset."""
-        return ZERO
+        pass
 
     def dst(self, d: datetime | None) -> timedelta:
         """Compute dst."""
-        return ZERO
+        pass
 
 
 def utcnow() -> datetime:

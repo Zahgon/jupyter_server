@@ -97,33 +97,15 @@ class TypeFromClasses(ClassBasedTraitType):  # type:ignore[type-arg]
 
     def instance_init(self, obj):
         """Initialize an instance."""
-        self._resolve_classes()
-        super().instance_init(obj)
+        pass
 
     def _resolve_classes(self):
         """Resolve all string names to actual classes."""
-        self.importable_klasses = []
-        for klass in self.klasses:
-            if isinstance(klass, str):
-                # Try importing the classes to compare. Silently, ignore if not importable.
-                try:
-                    klass = self._resolve_string(klass)  # noqa: PLW2901
-                    self.importable_klasses.append(klass)
-                except Exception:
-                    pass
-            else:
-                self.importable_klasses.append(klass)
-
-        if isinstance(self.default_value, str):
-            self.default_value = self._resolve_string(self.default_value)  # type:ignore[arg-type]
+        pass
 
     def default_value_repr(self):
         """The default value repr."""
-        value = self.default_value
-        if isinstance(value, str):
-            return repr(value)
-        else:
-            return repr(f"{value.__module__}.{value.__name__}")
+        pass
 
 
 class InstanceFromClasses(ClassBasedTraitType):  # type:ignore[type-arg]
@@ -207,36 +189,20 @@ class InstanceFromClasses(ClassBasedTraitType):  # type:ignore[type-arg]
 
     def instance_init(self, obj):
         """Initialize the trait."""
-        self._resolve_classes()
-        super().instance_init(obj)
+        pass
 
     def _resolve_classes(self):
         """Resolve all string names to actual classes."""
-        self.importable_klasses = []
-        assert self.klasses is not None
-        for klass in self.klasses:
-            if isinstance(klass, str):
-                # Try importing the classes to compare. Silently, ignore if not importable.
-                try:
-                    klass = self._resolve_string(klass)  # noqa: PLW2901
-                    self.importable_klasses.append(klass)
-                except Exception:
-                    pass
-            else:
-                self.importable_klasses.append(klass)
+        pass
 
     def make_dynamic_default(self):
         """Make the dynamic default for the trait."""
-        if (self.default_args is None) and (self.default_kwargs is None):
-            return None
-        return self.klass(  # type:ignore[attr-defined]
-            *(self.default_args or ()), **(self.default_kwargs or {})
-        )
+        pass
 
     def default_value_repr(self):
         """Get the default value repr."""
-        return repr(self.make_dynamic_default())
+        pass
 
     def from_string(self, s):
         """Convert from a string."""
-        return literal_eval(s)
+        pass

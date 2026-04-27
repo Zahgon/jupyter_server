@@ -17,12 +17,7 @@ class ShutdownHandler(JupyterHandler):
     @authorized
     async def post(self):
         """Shut down the server."""
-        self.log.info("Shutting down on /api/shutdown request.")
-
-        if self.serverapp:
-            await self.serverapp._cleanup()
-
-        ioloop.IOLoop.current().stop()
+        pass
 
 
 default_handlers = [

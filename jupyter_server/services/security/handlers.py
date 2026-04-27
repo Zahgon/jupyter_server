@@ -30,10 +30,7 @@ class CSPReportHandler(APIHandler):
     @authorized
     def post(self):
         """Log a content security policy violation report"""
-        self.log.warning(
-            "Content security violation: %s",
-            self.request.body.decode("utf8", "replace"),
-        )
+        pass
 
 
 default_handlers = [(csp_report_uri, CSPReportHandler)]

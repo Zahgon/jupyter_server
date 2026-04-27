@@ -29,7 +29,7 @@ class WebSocketMixin:
 
         Set ws_ping_interval = 0 to disable pings.
         """
-        return self.settings.get("ws_ping_interval", WS_PING_INTERVAL)  # type:ignore[attr-defined]
+        pass
 
     @property
     def ping_timeout(self):
@@ -37,9 +37,7 @@ class WebSocketMixin:
         close the websocket connection (VPNs, etc. can fail to cleanly close ws connections).
         Default is max of 3 pings or 30 seconds.
         """
-        return self.settings.get(  # type:ignore[attr-defined]
-            "ws_ping_timeout", max(3 * self.ping_interval, WS_PING_INTERVAL)
-        )
+        pass
 
     @no_type_check
     def check_origin(self, origin: Optional[str] = None) -> bool:
@@ -124,44 +122,13 @@ class WebSocketMixin:
     @no_type_check
     def open(self, *args, **kwargs):
         """Open the websocket."""
-        self.log.debug("Opening websocket %s", self.request.path)
-
-        # start the pinging
-        if self.ping_interval > 0:
-            loop = ioloop.IOLoop.current()
-            self.last_ping = loop.time()  # Remember time of last ping
-            self.last_pong = self.last_ping
-            self.ping_callback = ioloop.PeriodicCallback(
-                self.send_ping,
-                self.ping_interval,
-            )
-            self.ping_callback.start()
-        return super().open(*args, **kwargs)
+        pass
 
     @no_type_check
     def send_ping(self):
         """send a ping to keep the websocket alive"""
-        if self.ws_connection is None and self.ping_callback is not None:
-            self.ping_callback.stop()
-            return
-
-        if self.ws_connection.client_terminated:
-            self.close()
-            return
-
-        # check for timeout on pong.  Make sure that we really have sent a recent ping in
-        # case the machine with both server and client has been suspended since the last ping.
-        now = ioloop.IOLoop.current().time()
-        since_last_pong = 1e3 * (now - self.last_pong)
-        since_last_ping = 1e3 * (now - self.last_ping)
-        if since_last_ping < 2 * self.ping_interval and since_last_pong > self.ping_timeout:
-            self.log.warning("WebSocket ping timeout after %i ms.", since_last_pong)
-            self.close()
-            return
-
-        self.ping(b"")
-        self.last_ping = now
+        pass
 
     def on_pong(self, data):
         """Handle a pong message."""
-        self.last_pong = ioloop.IOLoop.current().time()
+        pass
